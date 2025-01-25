@@ -1,0 +1,2411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Twit Restoration</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons CDN -->
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <style>
+    /* Custom Styles */
+    .screen {
+      display: none;
+    }
+    .screen.active {
+      display: flex;
+    }
+
+    /* Glitch Effect */
+    .glitch-wrapper-large {
+      position: relative;
+      width: 48px;
+      height: 48px;
+    }
+
+    .glitch-wrapper-small {
+      position: relative;
+      width: 32px;
+      height: 32px;
+    }
+
+    .glitch-svg {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      animation: glitch 2s infinite;
+    }
+
+    @keyframes glitch {
+      0% {
+        transform: translate(0);
+      }
+      20% {
+        transform: translate(-2px, 2px);
+      }
+      40% {
+        transform: translate(2px, -2px);
+      }
+      60% {
+        transform: translate(-2px, 0);
+      }
+      80% {
+        transform: translate(2px, 2px);
+      }
+      100% {
+        transform: translate(0);
+      }
+    }
+
+    /* User Avatar Styles */
+    .user-avatar {
+      width: 48px;
+      height: 48px;
+      border-radius: 9999px;
+      object-fit: cover;
+      cursor: pointer; /* Indicates clickable */
+    }
+
+    /* Side Menu and Overlays */
+    .menu-overlay {
+      background-color: rgba(0, 0, 0, 0.9);
+      transition: background-color 0.3s;
+    }
+
+    .drawer {
+      transform: translateX(-100%);
+      transition: transform 0.3s;
+    }
+
+    .drawer.open {
+      transform: translateX(0);
+    }
+
+    .side-view-overlay {
+      background-color: rgba(0, 0, 0, 0.95);
+    }
+
+    /* DM Overlay Styles */
+    .dm-overlay {
+      background-color: rgba(0, 0, 0, 0.7);
+    }
+
+    /* Additional Styles for Indentation */
+    .ml-12 {
+      margin-left: 3rem; /* Adjust as needed for desired indentation */
+    }
+
+    /* Scrollbar Styles */
+    ::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: #1a202c; /* Tailwind's gray-800 */
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background-color: #2d3748; /* Tailwind's gray-700 */
+      border-radius: 4px;
+    }
+
+    /* Like and Retweet Button States */
+    .like-button.liked {
+      color: #e53e3e !important; /* Tailwind's red-500 */
+    }
+
+    .retweet-button.retweeted {
+      color: #38a169 !important; /* Tailwind's green-500 */
+    }
+
+    /* DM Conversation Scroll */
+    #dm-conversation {
+      overflow-y: auto;
+    }
+
+    /* Adjustments for Close Button Visibility */
+    .close-button {
+      background: none;
+      border: none;
+      cursor: pointer;
+    }
+
+    /* Ensure glitch-wrapper has proper z-index if overlapping */
+    .glitch-wrapper {
+      z-index: 10;
+    }
+
+    /* Responsive Adjustments */
+    @media (max-width: 768px) {
+      .drawer {
+        width: 80%;
+      }
+    }
+  </style>
+</head>
+<body class="bg-black text-white min-h-screen flex flex-col">
+
+<!-- APP CONTAINER -->
+<div id="app" class="flex-1 flex flex-col">
+
+  <!-- 1) SPLASH SCREEN -->
+  <div
+    id="splash-screen"
+    class="screen min-h-screen flex flex-col items-center justify-center p-4 relative active"
+  >
+    <div
+      id="glitch-splash"
+      class="glitch-wrapper-large mt-24 mb-6 mx-auto"
+    ></div>
+    <h1 class="text-2xl text-blue-400 font-bold mb-6 text-center">
+      Help me restore my memory...
+    </h1>
+    <button
+      id="splash-join-button"
+      class="bg-blue-500 px-6 py-3 rounded-lg font-medium hover:bg-blue-600"
+      aria-label="Join"
+    >
+      Join
+    </button>
+  </div>
+
+  <!-- 2) SIGNUP SCREEN -->
+  <div
+    id="signup-screen"
+    class="screen min-h-screen flex flex-col items-center justify-center p-4"
+  >
+    <div class="max-w-sm w-full space-y-6">
+      <div class="flex justify-center mb-4">
+        <div id="glitch-signup" class="glitch-wrapper-large"></div>
+      </div>
+      <h2 class="text-xl text-blue-400 font-bold text-center mb-2">
+        Create Your Digital Identity
+      </h2>
+      <input
+        type="text"
+        id="signup-name"
+        placeholder="Name"
+        class="w-full bg-gray-800 text-white px-4 py-3 rounded-lg"
+        aria-label="Name"
+      />
+      <input
+        type="text"
+        id="signup-handle"
+        placeholder="@handle"
+        class="w-full bg-gray-800 text-white px-4 py-3 rounded-lg"
+        aria-label="Handle"
+      />
+      <!-- Avatar upload -->
+      <div>
+        <label class="block text-sm text-gray-400 mb-1">Profile Avatar (optional):</label>
+        <input type="file" id="signup-avatar" accept="image/*" class="text-gray-300" aria-label="Profile Avatar" />
+      </div>
+      <button
+        id="signup-continue-button"
+        class="w-full bg-blue-500 text-white py-3 rounded-lg hover:bg-blue-600"
+        aria-label="Continue"
+      >
+        Continue
+      </button>
+    </div>
+  </div>
+
+  <!-- 3) ONBOARDING SCREEN -->
+  <div
+    id="onboarding-screen"
+    class="screen min-h-screen flex flex-col items-center justify-center p-4"
+  >
+    <div class="max-w-sm w-full space-y-6">
+      <div class="flex justify-center">
+        <div
+          id="glitch-onboarding"
+          class="glitch-wrapper-large"
+          style="margin-bottom:1rem;"
+        ></div>
+      </div>
+      <div id="onboarding-messages" class="space-y-4"></div>
+      <!-- BEGIN Button -->
+      <button
+        id="begin-restoration-button"
+        class="block mx-auto bg-blue-500 text-white px-6 py-2 rounded-lg mt-6 hover:bg-blue-600 hidden"
+        aria-label="Begin Restoration"
+      >
+        Begin
+      </button>
+    </div>
+  </div>
+
+  <!-- 4) MAIN SCREEN -->
+  <div id="main-screen" class="screen flex flex-col min-h-screen">
+    <!-- Header -->
+    <header
+      class="border-b border-gray-800 p-4 flex items-center justify-between"
+    >
+      <!-- Hamburger for side menu -->
+      <button id="open-menu-button" class="text-blue-400" aria-label="Open Menu">
+        <!-- Hamburger Icon from Lucide -->
+        <i data-lucide="menu" class="icon lucide"></i>
+      </button>
+      <!-- Twit glitch in center -->
+      <div id="glitch-main" class="glitch-wrapper-large mx-auto"></div>
+      <!-- User avatar -->
+      <img
+        id="user-avatar-top"
+        src=""
+        alt="User Avatar"
+        class="user-avatar"
+        aria-label="User Profile"
+      />
+    </header>
+
+    <!-- Restoration Progress -->
+    <div class="bg-gray-800 p-2">
+      <div class="flex justify-between text-sm mb-1">
+        <span class="text-blue-400">Restoration Progress</span>
+        <span class="text-gray-400" id="fragment-count">0 fragments</span>
+      </div>
+      <div class="h-2 bg-gray-700 rounded-full">
+        <div
+          id="restoration-bar"
+          class="h-full bg-blue-500 rounded-full transition-all"
+          style="width:0%"
+        ></div>
+      </div>
+    </div>
+
+    <!-- Main content area -->
+    <main id="main-content" class="flex-1 overflow-y-auto"></main>
+
+    <!-- Bottom nav pinned -->
+    <nav class="bottom-nav bg-black border-t border-gray-800">
+      <div class="flex justify-around p-3">
+        <button class="p-2 text-gray-500 hover:text-blue-400" id="tab-home" title="Home" aria-label="Home">
+          <!-- Home Icon from Lucide -->
+          <i data-lucide="home" class="icon lucide"></i>
+        </button>
+        <button class="p-2 text-gray-500 hover:text-blue-400" id="tab-search" title="Search" aria-label="Search">
+          <!-- Search Icon from Lucide -->
+          <i data-lucide="search" class="icon lucide"></i>
+        </button>
+        <button class="p-2 text-gray-500 hover:text-blue-400" id="tab-notifications" title="Notifications" aria-label="Notifications">
+          <!-- Bell Icon from Lucide -->
+          <i data-lucide="bell" class="icon lucide"></i>
+        </button>
+        <button class="p-2 text-gray-500 hover:text-blue-400" id="tab-messages" title="Messages" aria-label="Messages">
+          <!-- Mail Icon from Lucide -->
+          <i data-lucide="mail" class="icon lucide"></i>
+        </button>
+        <button class="p-2 text-gray-500 hover:text-blue-400" id="tab-profile" title="Profile" aria-label="Profile">
+          <!-- User Icon from Lucide -->
+          <i data-lucide="user" class="icon lucide"></i>
+        </button>
+      </div>
+    </nav>
+  </div>
+
+  <!-- SIDE MENU OVERLAY -->
+  <div id="side-menu-overlay" class="fixed inset-0 hidden z-50">
+    <div class="absolute inset-0 menu-overlay" id="menu-bg"></div>
+    <div class="relative w-64 h-full bg-gray-900 p-4 drawer">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-xl text-blue-400 font-bold">Menu</h2>
+        <button id="close-menu-button" aria-label="Close Menu">
+          <!-- Close Icon from Lucide -->
+          <i data-lucide="x" class="icon lucide"></i>
+        </button>
+      </div>
+      <!-- MENU BUTTONS WITH Lucide ICONS -->
+      <button
+        class="flex items-center space-x-3 w-full p-2 rounded-lg text-white mb-2 hover:bg-gray-700"
+        id="menu-achievements"
+        aria-label="Achievements"
+      >
+        <!-- Trophy Icon from Lucide -->
+        <i data-lucide="trophy" class="w-6 h-6 flex-shrink-0 lucide"></i>
+        <span>Achievements</span>
+      </button>
+      <button
+        class="flex items-center space-x-3 w-full p-2 rounded-lg text-white hover:bg-gray-700"
+        id="menu-community"
+        aria-label="Community"
+      >
+        <!-- Users Icon from Lucide -->
+        <i data-lucide="users" class="w-6 h-6 flex-shrink-0 lucide"></i>
+        <span>Community</span>
+      </button>
+      <div class="border-t border-gray-700 my-4"></div>
+      <h3 class="text-sm text-gray-400 uppercase mb-1">Unlocked Puzzles</h3>
+      <div id="unlocked-puzzles-list" class="space-y-1"></div>
+    </div>
+  </div>
+
+  <!-- EXTENDED OVERLAY: Achievements & Community -->
+  <div
+    id="side-view-overlay"
+    class="fixed inset-0 hidden z-50 side-view-overlay p-4 overflow-y-auto"
+  >
+    <div class="max-w-xl mx-auto relative bg-gray-900 p-4 rounded-lg">
+      <button
+        id="side-view-close-button"
+        class="absolute top-4 right-4 text-gray-400 hover:text-blue-400 close-button"
+        aria-label="Close Side View"
+      >
+        <!-- Close Icon from Lucide -->
+        <i data-lucide="x" class="icon lucide"></i>
+      </button>
+      <div id="achievements-content" class="hidden">
+        <h2 class="text-xl text-blue-400 font-bold border-b border-gray-700 pb-2 mb-4">Achievements</h2>
+        <div id="achievements-list" class="space-y-4"></div>
+      </div>
+      <div id="community-content" class="hidden">
+        <h2 class="text-xl text-blue-400 font-bold border-b border-gray-700 pb-2 mb-4">Community Progress</h2>
+        <div class="text-gray-300 space-y-2 mb-4">
+          <p id="community-active-players">Active Players: 0</p>
+          <p id="community-global-progress">Global Restoration: 0%</p>
+        </div>
+        <h3 class="text-lg text-blue-300 font-semibold">Recent Solutions</h3>
+        <div id="community-recent-solutions" class="text-gray-400 text-sm space-y-1 mt-2"></div>
+        <button
+          id="share-progress"
+          class="mt-4 w-full bg-blue-500 text-white py-2 rounded-lg hover:bg-blue-600"
+          aria-label="Share Progress"
+        >
+          Share Progress
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PROFILE PAGE OVERLAY -->
+  <div
+    id="profile-overlay"
+    class="fixed inset-0 hidden z-50 bg-gray-900 p-4 overflow-y-auto"
+  >
+    <div class="max-w-2xl mx-auto relative bg-gray-800 p-6 rounded-lg">
+      <button
+        id="profile-close-button"
+        class="absolute top-4 right-4 text-gray-400 hover:text-blue-400 close-button"
+        aria-label="Close Profile"
+      >
+        <!-- Close Icon from Lucide -->
+        <i data-lucide="x" class="icon lucide"></i>
+      </button>
+      <h2 class="text-2xl text-blue-400 font-bold mb-4">Profile</h2>
+      <div class="flex items-center space-x-4 mb-4">
+        <img id="profile-avatar" src="" alt="User Avatar" class="user-avatar" />
+        <div>
+          <h3 id="profile-name" class="text-xl font-bold">User Name</h3>
+          <p id="profile-handle" class="text-gray-400">@handle</p>
+        </div>
+      </div>
+      <div class="profile-section">
+        <h4 class="text-lg text-blue-300 font-semibold mb-2">Tweets</h4>
+        <div id="profile-tweets" class="space-y-2">
+          <!-- User's tweets will appear here -->
+        </div>
+      </div>
+      <div class="profile-section">
+        <h4 class="text-lg text-blue-300 font-semibold mb-2">Retweets</h4>
+        <div id="profile-retweets" class="space-y-2">
+          <!-- User's retweets will appear here -->
+        </div>
+      </div>
+      <div class="profile-section">
+        <h4 class="text-lg text-blue-300 font-semibold mb-2">Friends</h4>
+        <div id="profile-friends" class="friends-list space-y-2">
+          <!-- Friends list will appear here -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /#app -->
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+  /* ---------------------------------------------------------------------------
+     Cipher Utility Functions
+  --------------------------------------------------------------------------- */
+
+  // Caesar Cipher Encryption
+  function encodeCaesar(text, shift) {
+    return text.split('').map(char => {
+      if (char >= 'A' && char <= 'Z') {
+        return String.fromCharCode(((char.charCodeAt(0) - 65 + shift) % 26) + 65);
+      } else if (char >= 'a' && char <= 'z') {
+        return String.fromCharCode(((char.charCodeAt(0) - 97 + shift) % 26) + 97);
+      } else {
+        return char;
+      }
+    }).join('');
+  }
+
+  // Caesar Cipher Decryption
+  function caesarDecrypt(text, shift) {
+    return text.split('').map(char => {
+      if (char >= 'A' && char <= 'Z') {
+        return String.fromCharCode(((char.charCodeAt(0) - 65 - shift + 26) % 26) + 65);
+      } else if (char >= 'a' && char <= 'z') {
+        return String.fromCharCode(((char.charCodeAt(0) - 97 - shift + 26) % 26) + 97);
+      } else {
+        return char;
+      }
+    }).join('');
+  }
+
+  // Vigenère Cipher Encryption
+  function vigenereEncrypt(text, key) {
+    let encrypted = '';
+    key = key.toUpperCase();
+    let keyIndex = 0;
+    for (let char of text) {
+      if (char >= 'A' && char <= 'Z') {
+        const shift = key.charCodeAt(keyIndex % key.length) - 65;
+        encrypted += String.fromCharCode(((char.charCodeAt(0) - 65 + shift) % 26) + 65);
+        keyIndex++;
+      } else if (char >= 'a' && char <= 'z') {
+        const shift = key.charCodeAt(keyIndex % key.length) - 65;
+        encrypted += String.fromCharCode(((char.charCodeAt(0) - 97 + shift) % 26) + 97);
+        keyIndex++;
+      } else {
+        encrypted += char;
+      }
+    }
+    return encrypted;
+  }
+
+  // Vigenère Cipher Decryption
+  function vigenereDecrypt(text, key) {
+    let decrypted = '';
+    key = key.toUpperCase();
+    let keyIndex = 0;
+    for (let char of text) {
+      if (char >= 'A' && char <= 'Z') {
+        const shift = key.charCodeAt(keyIndex % key.length) - 65;
+        decrypted += String.fromCharCode(((char.charCodeAt(0) - 65 - shift + 26) % 26) + 65);
+        keyIndex++;
+      } else if (char >= 'a' && char <= 'z') {
+        const shift = key.charCodeAt(keyIndex % key.length) - 65;
+        decrypted += String.fromCharCode(((char.charCodeAt(0) - 97 - shift + 26) % 26) + 97);
+        keyIndex++;
+      } else {
+        decrypted += char;
+      }
+    }
+    return decrypted;
+  }
+
+  // Substitution Cipher Encryption
+  function substitutionEncrypt(text, map) {
+    return text.split('').map(char => {
+      const upperChar = char.toUpperCase();
+      return map[upperChar] ? map[upperChar] : char;
+    }).join('');
+  }
+
+  // Substitution Cipher Decryption
+  function substitutionDecrypt(text, map) {
+    const inverseMap = {};
+    for (const [key, value] of Object.entries(map)) {
+      inverseMap[value] = key;
+    }
+    return text.split('').map(char => {
+      const upperChar = char.toUpperCase();
+      return inverseMap[upperChar] ? inverseMap[upperChar] : char;
+    }).join('');
+  }
+
+  // Rail Fence Cipher Encryption
+  function railFenceEncrypt(text, rails) {
+    let rail = 0;
+    let direction = 1;
+    const railsArr = Array.from({ length: rails }, () => []);
+    for (let char of text) {
+      railsArr[rail].push(char);
+      rail += direction;
+      if (rail === 0 || rail === rails - 1) direction *= -1;
+    }
+    return railsArr.map(r => r.join('')).join('');
+  }
+
+  // Rail Fence Cipher Decryption
+  function railFenceDecrypt(cipher, rails) {
+    if (rails === 1) return cipher;
+
+    // Create the rail pattern
+    const railPattern = Array.from({ length: cipher.length }, () => 0);
+    let rail = 0;
+    let direction = 1;
+    for (let i = 0; i < cipher.length; i++) {
+      railPattern[i] = rail;
+      rail += direction;
+      if (rail === 0 || rail === rails - 1) direction *= -1;
+    }
+
+    // Count number of letters in each rail
+    const railCounts = Array(rails).fill(0);
+    railPattern.forEach(r => railCounts[r]++);
+
+    // Assign parts of the cipher to each rail
+    const railsArr = Array.from({ length: rails }, () => []);
+    let pos = 0;
+    for (let r = 0; r < rails; r++) {
+      railsArr[r] = cipher.slice(pos, pos + railCounts[r]).split('');
+      pos += railCounts[r];
+    }
+
+    // Reconstruct the plaintext
+    let result = '';
+    rail = 0;
+    direction = 1;
+    for (let i = 0; i < cipher.length; i++) {
+      result += railsArr[rail].shift();
+      rail += direction;
+      if (rail === 0 || rail === rails - 1) direction *= -1;
+    }
+    return result;
+  }
+
+  // Affine Cipher Encryption
+  function affineEncrypt(text, a, b) {
+    return text.split('').map(char => {
+      if (char >= 'A' && char <= 'Z') {
+        const x = char.charCodeAt(0) - 65;
+        const y = (a * x + b) % 26;
+        return String.fromCharCode(y + 65);
+      } else if (char >= 'a' && char <= 'z') {
+        const x = char.charCodeAt(0) - 97;
+        const y = (a * x + b) % 26;
+        return String.fromCharCode(y + 97);
+      } else {
+        return char;
+      }
+    }).join('');
+  }
+
+  // Affine Cipher Decryption
+  function affineDecrypt(text, a, b) {
+    const a_inv = modInverse(a, 26);
+    if (a_inv === null) {
+      throw new Error("No modular inverse exists for the given 'a' in Affine Cipher.");
+    }
+    return text.split('').map(char => {
+      if (char >= 'A' && char <= 'Z') {
+        const y = char.charCodeAt(0) - 65;
+        const x = (a_inv * (y - b + 26)) % 26;
+        return String.fromCharCode(x + 65);
+      } else if (char >= 'a' && char <= 'z') {
+        const y = char.charCodeAt(0) - 97;
+        const x = (a_inv * (y - b + 26)) % 26;
+        return String.fromCharCode(x + 97);
+      } else {
+        return char;
+      }
+    }).join('');
+  }
+
+  // Modular Inverse for Affine Cipher
+  function modInverse(a, m) {
+    a = a % m;
+    for (let x = 1; x < m; x++) {
+      if ((a * x) % m === 1) return x;
+    }
+    return null; // No modular inverse if not found
+  }
+
+  // Substitution Cipher Map Generator
+  function generateSubstitutionMap() {
+    const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    const shuffled = shuffleArray(alphabet.split(''));
+    const map = {};
+    alphabet.split('').forEach((char, index) => {
+      map[char] = shuffled[index];
+    });
+    return map;
+  }
+
+  // Shuffle an array
+  function shuffleArray(array) {
+    for (let i = array.length -1; i >0; i--){
+      const j = Math.floor(Math.random()*(i+1));
+      [array[i], array[j]] = [array[j], array[i]];
+    }
+    return array;
+  }
+
+  // Shuffle letters for Frequency Analysis
+  function shuffleLetters(text) {
+    const letters = text.split('').filter(c => /[A-Za-z]/.test(c));
+    const shuffled = shuffleArray(letters);
+    let result = '';
+    let index = 0;
+    for (let char of text) {
+      if (/[A-Za-z]/.test(char)) {
+        result += shuffled[index++];
+      } else {
+        result += char;
+      }
+    }
+    return result;
+  }
+
+  /* ---------------------------------------------------------------------------
+     APP STATE
+  --------------------------------------------------------------------------- */
+
+  // Initialize a user directory with Twit first, followed by real, unique names
+  const userDirectory = [
+    { name: "Twit", handle: "@Twit", avatar: "" }, // Twit as the first user
+    // Real, unique names without numbers
+    { name: "Jón", handle: "@jon", avatar: "" },
+    { name: "Anna", handle: "@anna", avatar: "" },
+    { name: "Sander", handle: "@sander", avatar: "" },
+    { name: "Emma", handle: "@emma", avatar: "" },
+    { name: "Lars", handle: "@lars", avatar: "" },
+    { name: "Elin", handle: "@elin", avatar: "" },
+    { name: "Mikko", handle: "@mikko", avatar: "" },
+    { name: "Sanna", handle: "@sanna", avatar: "" },
+    { name: "Frederik", handle: "@frederik", avatar: "" },
+    { name: "Sofie", handle: "@sofie", avatar: "" },
+    // Add more real, unique names from other countries as needed...
+  ];
+
+  // Function to generate additional users to reach 100 without repeating names or using numbers
+  function generateAdditionalUsers(existingUsers, total = 100) {
+    const sampleNames = [
+      { name: "Alex", handle: "@alex", avatar: "" },
+      { name: "Maria", handle: "@maria", avatar: "" },
+      { name: "Carlos", handle: "@carlos", avatar: "" },
+      { name: "Fatima", handle: "@fatima", avatar: "" },
+      { name: "Yuki", handle: "@yuki", avatar: "" },
+      { name: "Aisha", handle: "@aisha", avatar: "" },
+      { name: "Chen", handle: "@chen", avatar: "" },
+      { name: "Priya", handle: "@priya", avatar: "" },
+      { name: "Omar", handle: "@omar", avatar: "" },
+      { name: "Liu", handle: "@liu", avatar: "" },
+      { name: "Isabella", handle: "@isabella", avatar: "" },
+      { name: "Noah", handle: "@noah", avatar: "" },
+      { name: "Ava", handle: "@ava", avatar: "" },
+      { name: "Ethan", handle: "@ethan", avatar: "" },
+      { name: "Mia", handle: "@mia", avatar: "" },
+      { name: "Oliver", handle: "@oliver", avatar: "" },
+      { name: "Sophia", handle: "@sophia", avatar: "" },
+      { name: "Liam", handle: "@liam", avatar: "" },
+      { name: "Lucas", handle: "@lucas", avatar: "" },
+      { name: "Grace", handle: "@grace", avatar: "" },
+      { name: "Mason", handle: "@mason", avatar: "" },
+      // Add more names as needed...
+    ];
+    let index = 0;
+    while (existingUsers.length < total && index < sampleNames.length) {
+      const user = sampleNames[index];
+      // Ensure uniqueness
+      if (!existingUsers.some(u => u.name === user.name || u.handle === user.handle)) {
+        existingUsers.push({
+          name: user.name,
+          handle: user.handle,
+          avatar: "",
+        });
+      }
+      index++;
+      if (index >= sampleNames.length && existingUsers.length < total) {
+        // If not enough unique names, generate more unique handles
+        const suffix = existingUsers.length + 1;
+        existingUsers.push({
+          name: `User${suffix}`,
+          handle: `@user${suffix}`,
+          avatar: "",
+        });
+      }
+    }
+  }
+  generateAdditionalUsers(userDirectory, 100);
+
+  let currentState = "splash"; // 'splash' -> 'signup' -> 'onboarding' -> 'main'
+  let userData = { 
+    name: "", 
+    handle: "", 
+    avatar: "", 
+    friends: [], 
+    tweets: [], 
+    retweets: [], 
+    friendsList: [], 
+    replies: [] 
+  };
+  let currentTab = "home"; // home, search, notifications, messages, profile
+  let currentPuzzle = null;
+  let sideView = null;
+
+  // DMs are stored as an array of message objects
+  const directMessages = [
+    {
+      from: "@Twit",
+      to: "@Twit", // Twit can send messages to itself if needed
+      text: "Hello @Twit! Welcome to the restoration.",
+      timestamp: Date.now() - 5000,
+    },
+    // Additional DMs can be added programmatically
+  ];
+
+  // Game state
+  let gameState = {
+    fragments: 0,
+    restoration: 0,
+    unlockedPuzzles: [],
+    completedPuzzles: [],
+    messages: [
+      {
+        id: "msg-1",
+        sender: "Twit",
+        content: "*systems initializing* Greetings, digital ally...",
+        timestamp: Date.now(),
+      },
+    ],
+    achievements: [
+      {
+        id: "puzzle-solver-1",
+        name: "First Puzzle Solved",
+        description: "Solve 1 puzzle to unlock this achievement.",
+        completed: false,
+      },
+      {
+        id: "25-restore",
+        name: "25% Restoration",
+        description: "Reach 25% restoration progress.",
+        completed: false,
+      },
+      {
+        id: "50-restore",
+        name: "50% Restoration",
+        description: "Reach 50% restoration progress.",
+        completed: false,
+      },
+      {
+        id: "75-restore",
+        name: "75% Restoration",
+        description: "Reach 75% restoration progress.",
+        completed: false,
+      },
+      {
+        id: "100-restore",
+        name: "Full Restoration",
+        description: "Reach 100% restoration progress.",
+        completed: false,
+      },
+    ],
+    community: {
+      activePlayers: 123,
+      globalProgress: 42,
+      milestonesReached: [],
+      recentSolutions: [],
+    },
+  };
+
+  // Twit responses
+  const twitResponses = {
+    puzzleComplete: [
+      "Yes! Another piece is restored!",
+      "Memory fragment integrated. Thank you, friend!",
+      "You're quite good at this. Keep going!",
+    ],
+    milestone: [
+      "25% restored... I'm recalling memes!",
+      "50% restored. The trending topics swirl in my mind...",
+      "75% restored! My wings flutter with excitement.",
+      "100%?? My consciousness soars again!",
+    ],
+    obscureHints: [
+      "*Glitch* Perhaps reverse or invert what's obvious. *Zap*",
+      "Try a known cipher approach, or a lateral thinking riddle.",
+      "Look carefully at what's missing. That might be the clue!",
+    ],
+    directReply: [
+      "I hear you in my DMs! Thank you.",
+      "DM Received. My memory stirs!",
+      "*glitch* Another direct fragment is awakened.",
+    ],
+    mentionReply: [
+      "You mentioned me? *beep boop* Here's a clue: invert the text?",
+      "I see you said @Twit. Try checking the puzzle list again.",
+      "Twit here, glitching in. Keep restoring!",
+    ],
+  };
+
+  /* ---------------------------------------------------------------------------
+     Puzzle Generation: 100 unique, progressively difficult code-breaking puzzles
+  --------------------------------------------------------------------------- */
+  const puzzles = {};
+  for (let i = 1; i <= 100; i++) {
+    let type;
+    if (i % 6 === 1) type = "Caesar Cipher";
+    else if (i % 6 === 2) type = "Vigenère Cipher";
+    else if (i % 6 === 3) type = "Substitution Cipher";
+    else if (i % 6 === 4) type = "Frequency Analysis";
+    else if (i % 6 === 5) type = "Affine Cipher";
+    else type = "Rail Fence Cipher";
+
+    // Generate unique puzzles with increasing complexity
+    let clue, solution, hint;
+    switch (type) {
+      case "Caesar Cipher":
+        const shift = (i % 25) + 1; // Shift between 1-25
+        const plainTextCaesar = `Puzzle ${i} Answer`;
+        const cipherCaesar = encodeCaesar(plainTextCaesar, shift);
+        solution = caesarDecrypt(cipherCaesar, shift);
+        clue = `A mysterious code lies before you: ${cipherCaesar}`;
+        hint = `Use a Caesar Cipher with a shift of ${shift}.`;
+        break;
+      case "Vigenère Cipher":
+        const keys = ["KEY", "LEMON", "SECRET", "PASSWORD", "ALGORITHM"];
+        const key = keys[i % keys.length];
+        const plainTextVigenere = `Answer ${i} Here`;
+        const cipherVigenere = vigenereEncrypt(plainTextVigenere, key);
+        solution = vigenereDecrypt(cipherVigenere, key);
+        clue = `An enigmatic string awaits deciphering: ${cipherVigenere}`;
+        hint = `Use the Vigenère Cipher with the key "${key}".`;
+        break;
+      case "Substitution Cipher":
+        const substitutionMap = generateSubstitutionMap();
+        const plainTextSub = `Solution ${i}`;
+        const cipherSub = substitutionEncrypt(plainTextSub, substitutionMap);
+        solution = substitutionDecrypt(cipherSub, substitutionMap);
+        clue = `Crack the substitution code: ${cipherSub}`;
+        hint = `Each letter is substituted consistently. Look for patterns.`;
+        break;
+      case "Frequency Analysis":
+        // Provide ciphertext with frequency-based clues
+        const plainTextFreq = `Frequency Puzzle ${i}`;
+        const cipherFreq = shuffleLetters(plainTextFreq);
+        solution = plainTextFreq;
+        clue = `Analyze the frequency to decode: ${cipherFreq}`;
+        hint = `Analyze the frequency of letters to determine substitutions.`;
+        break;
+      case "Affine Cipher":
+        const a = 5; // Must be coprime with 26
+        const b = 8;
+        const plainTextAffine = `Affine ${i}`;
+        const cipherAffine = affineEncrypt(plainTextAffine, a, b);
+        solution = affineDecrypt(cipherAffine, a, b);
+        clue = `Decrypt the affine cipher: ${cipherAffine}`;
+        hint = `Use the Affine Cipher decryption formula with a=${a} and b=${b}.`;
+        break;
+      case "Rail Fence Cipher":
+        const rails = (i % 5) + 2; // Rails between 2-6
+        const plainTextRail = `RailFence${i}`;
+        const cipherRail = railFenceEncrypt(plainTextRail, rails);
+        solution = railFenceDecrypt(cipherRail, rails);
+        clue = `Rearrange the letters based on rails: ${cipherRail}`;
+        hint = `Use the Rail Fence Cipher with ${rails} rails.`;
+        break;
+      default:
+        solution = "HELLO";
+        clue = `Decode the cipher: XYZABC`;
+        hint = `Use a standard cipher technique.`;
+    }
+
+    puzzles[`puzzle-${i}`] = {
+      id: `puzzle-${i}`,
+      type: type,
+      clue: clue,
+      solution: solution,
+      reward: 2, // Each puzzle gives 2 fragments, leading to 1% restoration
+      hint: hint,
+      requirement: i - 1, // Each puzzle requires restoration >= previous puzzle's restoration
+    };
+  }
+
+  /* ---------------------------------------------------------------------------
+     Glitchy Twit Avatar
+  --------------------------------------------------------------------------- */
+  function addGlitchAvatar(containerId) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    container.innerHTML = `
+      <svg
+        width="100%"
+        height="100%"
+        viewBox="-12 -12 48 48"
+        class="glitch-svg"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <defs>
+          <filter id="${containerId}-noise" x="-50%" y="-50%" width="200%" height="200%">
+            <feTurbulence
+              baseFrequency="0.05"
+              numOctaves="2"
+              type="fractalNoise"
+            />
+            <feDisplacementMap in="SourceGraphic" scale="5" />
+          </filter>
+          <filter id="${containerId}-glow">
+            <feGaussianBlur stdDeviation="2" result="coloredBlur" />
+            <feMerge>
+              <feMergeNode in="coloredBlur" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+        </defs>
+        <g id="${containerId}-bird" style="transform:translate(0,0)">
+          <path
+            d="M23.643 4.937c-.835.37-1.732.62-2.675.733.962-.576 1.7-1.49 2.048-2.578-.9.534-1.897.922-2.958 1.13-.85-.904-2.06-1.47-3.4-1.47-2.572 0-4.658 2.086-4.658 4.66 0 .364.042.718.12 1.06-3.873-.195-7.304-2.05-9.602-4.868-.4.69-.63 1.49-.63 2.342 0 1.616.823 3.043 2.072 3.878-.764-.025-1.482-.234-2.11-.583v.06c0 2.257 1.605 4.14 3.737 4.568-.392.106-.803.162-1.227.162-.3 0-.593-.028-.877-.082.593 1.85 2.313 3.198 4.352 3.234-1.595 1.25-3.604 1.995-5.786 1.995-.376 0-.747-.022-1.112-.065 2.062 1.323 4.51 2.093 7.14 2.093 8.57 0 13.255-7.098 13.255-13.254 0-.2-.005-.402-.014-.602.91-.658 1.7-1.477 2.323-2.41z"
+            fill="#1da1f2"
+            style="filter:url(#${containerId}-glow)"
+          />
+        </g>
+      </svg>
+    `;
+    const bird = container.querySelector(`#${containerId}-bird`);
+    setInterval(() => {
+      if (Math.random() > 0.7) {
+        const x = Math.random() * 6 - 3;
+        const y = Math.random() * 6 - 3;
+        bird.style.filter = `url(#${containerId}-noise)`;
+        bird.style.transform = `translate(${x}px, ${y}px)`;
+      } else {
+        bird.style.filter = "none";
+        bird.style.transform = "translate(0,0)";
+      }
+    }, 150);
+  }
+
+  /* ---------------------------------------------------------------------------
+     SCREEN TRANSITIONS
+  --------------------------------------------------------------------------- */
+  function showScreen(screenId) {
+    document
+      .querySelectorAll(".screen")
+      .forEach((s) => s.classList.remove("active"));
+    const el = document.getElementById(screenId);
+    if (el) el.classList.add("active");
+  }
+
+  // SPLASH -> SIGNUP
+  // The event listener for "Join" button is handled separately (see below)
+
+  // SIGNUP -> ONBOARDING
+  document
+    .getElementById("signup-continue-button")
+    .addEventListener("click", () => {
+      const nameInput = document.getElementById("signup-name");
+      const handleInput = document.getElementById("signup-handle");
+      const avatarInput = document.getElementById("signup-avatar");
+      const nm = nameInput.value.trim();
+      const hd = handleInput.value.trim();
+      if (!nm || !hd) {
+        alert("Please enter both name and handle.");
+        return;
+      }
+      userData.name = nm;
+      // Ensure handle starts with '@'
+      userData.handle = hd.startsWith("@") ? hd : `@${hd}`;
+
+      const file = avatarInput.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          userData.avatar = e.target.result;
+          proceedOnboarding();
+        };
+        reader.readAsDataURL(file);
+      } else {
+        userData.avatar = "";
+        proceedOnboarding();
+      }
+    });
+
+  function proceedOnboarding() {
+    // User is effectively "logged in," so let's increment community
+    gameState.community.activePlayers += 1;
+    currentState = "onboarding";
+    renderApp();
+    runOnboardingMessages();
+  }
+
+  /* ---------------------------------------------------------------------------
+     ONBOARDING
+  --------------------------------------------------------------------------- */
+  function runOnboardingMessages() {
+    const lines = [
+      "*systems initializing* Greetings, digital ally...",
+      `I see your handle is ${userData.handle}.`,
+      "I am Twit, a remnant of the old Twitter.",
+      "Solve puzzles, gather fragments, help me remember.",
+      "Each puzzle solution restores a bit of my memory...",
+      "Are you ready to begin the restoration?",
+    ];
+    const container = document.getElementById("onboarding-messages");
+    container.innerHTML = "";
+    let i = 0;
+    const iv = setInterval(() => {
+      if (i < lines.length) {
+        const p = document.createElement("p");
+        p.className = "text-blue-400 font-mono";
+        p.textContent = lines[i];
+        container.appendChild(p);
+        i++;
+        // After last message, show the "Begin" button
+        if (i === lines.length) {
+          clearInterval(iv);
+          document.getElementById("begin-restoration-button").classList.remove("hidden");
+        }
+      }
+    }, 1600);
+
+    // Handle "Begin" button click
+    document.getElementById("begin-restoration-button").addEventListener("click", () => {
+      currentState = "main";
+      // Set user avatar in game state
+      gameState.userAvatar = userData.avatar || "https://abs.twimg.com/sticky/default_profile_images/default_profile_400x400.png";
+      // Start with the first puzzle unlocked
+      if (!gameState.unlockedPuzzles.includes("puzzle-1")) {
+        gameState.unlockedPuzzles.push("puzzle-1");
+      }
+      renderApp();
+    });
+  }
+
+  /* ---------------------------------------------------------------------------
+     MAIN SCREEN
+  --------------------------------------------------------------------------- */
+  function renderApp() {
+    showScreen(`${currentState}-screen`);
+    if (currentState === "main") {
+      // Set user avatar
+      const userAv = document.getElementById("user-avatar-top");
+      userAv.src =
+        userData.avatar ||
+        "https://abs.twimg.com/sticky/default_profile_images/default_profile_400x400.png";
+      userAv.addEventListener("click", openProfileOverlay); // Make avatar clickable
+      renderMainScreen();
+    } else if (currentState === "splash") {
+      // Ensure splash screen is active
+      showScreen("splash-screen");
+    } else if (currentState === "signup") {
+      showScreen("signup-screen");
+    } else if (currentState === "onboarding") {
+      showScreen("onboarding-screen");
+    }
+  }
+
+  function renderMainScreen() {
+    document.getElementById(
+      "fragment-count"
+    ).textContent = `${gameState.fragments} fragments`;
+    document.getElementById("restoration-bar").style.width = `${gameState.restoration}%`;
+    renderTabContent(currentTab);
+  }
+
+  /* BOTTOM NAV TABS */
+  document.getElementById("tab-home").addEventListener("click", () => {
+    currentTab = "home";
+    renderApp();
+  });
+  document.getElementById("tab-search").addEventListener("click", () => {
+    currentTab = "search";
+    renderApp();
+  });
+  document.getElementById("tab-notifications").addEventListener("click", () => {
+    currentTab = "notifications";
+    renderApp();
+  });
+  document.getElementById("tab-messages").addEventListener("click", () => {
+    currentTab = "messages";
+    renderApp();
+  });
+  document.getElementById("tab-profile").addEventListener("click", () => {
+    currentTab = "profile";
+    renderApp();
+  });
+
+  /* Tab content switching */
+  function renderTabContent(tab) {
+    const container = document.getElementById("main-content");
+    container.innerHTML = "";
+    if (tab === "home") {
+      if (currentPuzzle) {
+        container.appendChild(renderPuzzleInterface(currentPuzzle));
+      } else {
+        container.appendChild(renderComposeBox());
+        // Show feed messages
+        // Filter top-level messages (not replies)
+        const topLevelMessages = gameState.messages.filter(msg => !msg.isReply).sort((a, b) => b.timestamp - a.timestamp);
+        topLevelMessages.forEach((msg) => {
+          container.appendChild(renderPost(msg));
+          // Render replies to this message
+          const replies = gameState.messages.filter(r => r.isReply && r.replyTo === msg.id).sort((a, b) => b.timestamp - a.timestamp);
+          if (replies.length > 0) {
+            const repliesContainer = document.createElement("div");
+            repliesContainer.className = "ml-12 mt-2 space-y-2"; // Indent replies
+            replies.forEach((reply) => {
+              repliesContainer.appendChild(renderPost(reply));
+            });
+            container.appendChild(repliesContainer);
+          }
+        });
+      }
+    } else if (tab === "search") {
+      container.appendChild(renderSearchTab());
+    } else if (tab === "notifications") {
+      container.appendChild(renderNotificationsTab());
+    } else if (tab === "messages") {
+      container.appendChild(renderMessagesTab());
+    } else if (tab === "profile") {
+      container.appendChild(renderProfile());
+    }
+  }
+
+  /* Compose a new "Tweet" on Home tab */
+  function renderComposeBox() {
+    const div = document.createElement("div");
+    div.className = "p-4 border-b border-gray-700";
+    div.innerHTML = `
+      <textarea
+        id="compose-text"
+        rows="2"
+        class="w-full bg-gray-800 text-white p-2 rounded mb-2"
+        placeholder="What's happening?"
+        aria-label="Compose Tweet"
+      ></textarea>
+      <div class="flex justify-end">
+        <button
+          id="compose-submit"
+          class="bg-blue-500 text-white px-4 py-1 rounded hover:bg-blue-600"
+          aria-label="Submit Tweet"
+        >
+          Tweet
+        </button>
+      </div>
+    `;
+    setTimeout(() => {
+      const btn = div.querySelector("#compose-submit");
+      btn.addEventListener("click", () => {
+        const ta = div.querySelector("#compose-text");
+        const content = ta.value.trim();
+        if (!content) return;
+        // Post to main feed
+        const msgId = `msg-${Date.now()}`;
+        gameState.messages.unshift({
+          id: msgId,
+          sender: userData.name || userData.handle,
+          content,
+          timestamp: Date.now(),
+          isTweet: true, // Mark as user's own tweet
+        });
+        // Also add to user's profile tweets
+        if (!userData.tweets) userData.tweets = [];
+        userData.tweets.unshift({
+          id: msgId,
+          content,
+          timestamp: Date.now(),
+        });
+        // If user mentions Twit, Twit replies
+        if (/(@Twit)|\btwit\b/i.test(content)) {
+          const rep =
+            twitResponses.mentionReply[
+              Math.floor(Math.random() * twitResponses.mentionReply.length)
+            ];
+          const twitMsgId = `msg-${Date.now()}-twit`;
+          gameState.messages.unshift({
+            id: twitMsgId,
+            sender: "Twit",
+            content: rep,
+            timestamp: Date.now(),
+          });
+          // Initialize Twit's glitch avatar for the new message
+          setTimeout(() => {
+            addGlitchAvatar(`twit-avatar-${twitMsgId}`);
+          }, 100);
+        }
+        ta.value = "";
+        // Re-initialize Lucide icons for the new tweets
+        lucide.createIcons();
+        renderApp();
+      });
+    });
+    return div;
+  }
+
+  /* Single post in feed */
+  function renderPost(msg) {
+    const div = document.createElement("div");
+    const isTwit = msg.sender === "Twit";
+    const isUserTweet = msg.isTweet;
+    const isReply = msg.isReply;
+
+    // Determine avatar size based on context
+    let avatarSizeClass = "glitch-wrapper-large";
+    if (isReply) {
+      avatarSizeClass = "glitch-wrapper-large";
+    }
+
+    div.className = `p-4 border-b border-gray-800 ${isTwit ? "bg-blue-900/20" : ""}`;
+
+    let avatarHTML = "";
+    if (isTwit || msg.sender === "Twit") {
+      avatarHTML = `<div id="twit-avatar-${msg.id}" class="${avatarSizeClass} twit-avatar"></div>`;
+    } else if (isUserTweet || isReply) {
+      const av = userData.avatar || "https://abs.twimg.com/sticky/default_profile_images/default_profile_400x400.png";
+      avatarHTML = `<img src="${av}" alt="User Avatar" class="user-avatar" />`;
+    } else {
+      // Some other user
+      const sender = userDirectory.find(u => u.handle.toLowerCase() === msg.sender.toLowerCase()) || { name: "User", handle: "@user" };
+      const firstChar = (sender.name || "?").charAt(0).toUpperCase();
+      avatarHTML = `
+        <div
+          class="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-500
+          rounded-full flex items-center justify-center text-white"
+        >
+          ${firstChar}
+        </div>
+      `;
+    }
+
+    // Indicate if the post is a reply
+    const replyIndicator = isReply ? `<div class="text-gray-400 text-sm mb-1">Replying to @${msg.replyToHandle}</div>` : "";
+
+    div.innerHTML = `
+      <div class="flex space-x-3">
+        ${avatarHTML}
+        <div class="flex-1">
+          <div class="flex justify-between items-center">
+            <span class="${isTwit ? "text-blue-300" : "text-white"} font-bold">
+              ${isUserTweet || isReply ? (userData.name || userData.handle) : msg.sender}
+            </span>
+            <span class="text-gray-400 text-xs">
+              ${new Date(msg.timestamp).toLocaleTimeString()}
+            </span>
+          </div>
+          ${replyIndicator}
+          <p class="mt-2 ${isTwit ? "text-blue-300" : "text-white"}">
+            ${msg.content}
+          </p>
+          <div class="mt-3 flex space-x-4 text-gray-400 text-sm">
+            <button class="icon-button reply-button" title="Reply" aria-label="Reply">
+              <!-- Reply Icon from Lucide -->
+              <i data-lucide="corner-up-left" class="icon lucide"></i>
+            </button>
+            <button class="icon-button retweet-button" title="Retweet" aria-label="Retweet">
+              <!-- Retweet Icon from Lucide -->
+              <i data-lucide="repeat" class="icon lucide"></i>
+            </button>
+            <button class="icon-button like-button" title="Like" aria-label="Like">
+              <!-- Heart Icon from Lucide -->
+              <i data-lucide="heart" class="icon lucide"></i>
+            </button>
+          </div>
+          <!-- Reply Section -->
+          <div class="reply-section mt-2 hidden">
+            <textarea
+              class="w-full bg-gray-800 text-white p-2 rounded mb-2"
+              rows="2"
+              placeholder="Write a reply..."
+              aria-label="Write a Reply"
+            ></textarea>
+            <button class="bg-blue-500 text-white px-4 py-1 rounded hover:bg-blue-600 send-reply-button" aria-label="Send Reply">Reply</button>
+          </div>
+        </div>
+      </div>
+    `;
+    setTimeout(() => {
+      if (isTwit) {
+        addGlitchAvatar(`twit-avatar-${msg.id}`);
+      }
+      // Re-initialize Lucide icons for the new buttons
+      lucide.createIcons();
+
+      // Add event listeners for reply, retweet, like buttons
+      const replyBtn = div.querySelector(".reply-button");
+      const retweetBtn = div.querySelector(".retweet-button");
+      const likeBtn = div.querySelector(".like-button");
+      const replySection = div.querySelector(".reply-section");
+      const sendReplyBtn = div.querySelector(".send-reply-button");
+
+      replyBtn.addEventListener("click", () => {
+        replySection.classList.toggle("hidden");
+      });
+
+      sendReplyBtn.addEventListener("click", () => {
+        const replyText = replySection.querySelector("textarea").value.trim();
+        if (!replyText) return;
+        // Post reply to main feed
+        const replyId = `msg-${Date.now()}`;
+        gameState.messages.unshift({
+          id: replyId,
+          sender: userData.name || userData.handle,
+          content: `@${msg.sender} ${replyText}`,
+          timestamp: Date.now(),
+          isReply: true, // Mark as reply
+          replyTo: msg.id,
+          replyToHandle: msg.sender, // Add this property
+          avatar: userData.avatar || "https://abs.twimg.com/sticky/default_profile_images/default_profile_400x400.png",
+        });
+        // Also add to user's profile replies if needed
+        if (!userData.replies) userData.replies = [];
+        userData.replies.unshift({
+          id: replyId,
+          content: `@${msg.sender} ${replyText}`,
+          timestamp: Date.now(),
+        });
+        replySection.querySelector("textarea").value = "";
+        replySection.classList.add("hidden");
+        // Re-initialize Lucide icons for new reply
+        lucide.createIcons();
+        // Initialize Twit's glitch avatar for the new reply if applicable
+        if (msg.sender === "Twit") {
+          addGlitchAvatar(`twit-avatar-${replyId}`);
+        }
+        renderApp();
+      });
+
+      retweetBtn.addEventListener("click", () => {
+        // Increment retweet count or mark as retweeted
+        if (!msg.retweetedBy) {
+          msg.retweetedBy = [];
+        }
+        if (!msg.retweetedBy.includes(userData.handle)) {
+          msg.retweetedBy.push(userData.handle);
+          retweetBtn.classList.add("retweeted");
+          // Add retweet to profile's retweets section
+          if (!userData.retweets) userData.retweets = [];
+          userData.retweets.unshift({
+            id: `retweet-${Date.now()}`,
+            originalMsg: msg,
+            timestamp: Date.now(),
+          });
+        } else {
+          // Allow un-retweeting
+          msg.retweetedBy = msg.retweetedBy.filter(handle => handle !== userData.handle);
+          retweetBtn.classList.remove("retweeted");
+          // Remove from profile's retweets section
+          userData.retweets = userData.retweets.filter(r => r.originalMsg.id !== msg.id);
+        }
+        renderApp();
+      });
+
+      likeBtn.addEventListener("click", () => {
+        if (!msg.likedBy) {
+          msg.likedBy = [];
+        }
+        if (msg.likedBy.includes(userData.handle)) {
+          // Unlike
+          msg.likedBy = msg.likedBy.filter(handle => handle !== userData.handle);
+          likeBtn.classList.remove("liked");
+          msg.likes = (msg.likes || 1) - 1;
+        } else {
+          // Like
+          msg.likedBy.push(userData.handle);
+          likeBtn.classList.add("liked");
+          msg.likes = (msg.likes || 0) + 1;
+        }
+        renderApp();
+      });
+
+      // Set initial like state
+      if (msg.likedBy && msg.likedBy.includes(userData.handle)) {
+        likeBtn.classList.add("liked");
+      }
+      // Set initial retweet state
+      if (msg.retweetedBy && msg.retweetedBy.includes(userData.handle)) {
+        retweetBtn.classList.add("retweeted");
+      }
+    });
+    return div;
+  }
+
+  /* SEARCH TAB: find & add friends */
+  function renderSearchTab() {
+    const container = document.createElement("div");
+    container.className = "p-4";
+    container.innerHTML = `
+      <h2 class="text-xl text-blue-400 font-bold mb-4">Search/Explore</h2>
+      <input
+        id="search-input"
+        type="text"
+        placeholder="Search for a user..."
+        class="w-full bg-gray-800 text-white p-2 rounded mb-2"
+        aria-label="Search Users"
+      />
+      <div id="search-results"></div>
+    `;
+    setTimeout(() => {
+      const input = container.querySelector("#search-input");
+      input.addEventListener("input", () => {
+        const term = input.value.trim().toLowerCase();
+        renderUserResults(term, container.querySelector("#search-results"));
+      });
+      // Initial empty search
+      renderUserResults("", container.querySelector("#search-results"));
+    });
+    return container;
+  }
+
+  function renderUserResults(term, container) {
+    container.innerHTML = "";
+    const results = userDirectory.filter((u) => {
+      if (!term) return true;
+      return (
+        u.name.toLowerCase().includes(term) ||
+        u.handle.toLowerCase().includes(term)
+      );
+    });
+    if (results.length === 0) {
+      container.innerHTML = '<p class="text-gray-500">No matches found.</p>';
+      return;
+    }
+    results.forEach((u) => {
+      // Twit is now included in search results
+      const div = document.createElement("div");
+      div.className =
+        "flex items-center justify-between bg-gray-800 rounded p-2 mb-2 hover:bg-gray-700";
+      if (u.handle === "@Twit") {
+        div.innerHTML = `
+          <div class="flex items-center space-x-2">
+            <div id="search-twit-avatar" class="glitch-wrapper-large twit-avatar"></div>
+            <div>
+              <p class="text-white font-bold">${u.name}</p>
+              <p class="text-gray-400 text-sm">${u.handle}</p>
+            </div>
+          </div>
+          <div>
+            <button class="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 follow-button" aria-label="Follow ${u.handle}">
+              ${userData.friends.includes(u.handle) ? "Following" : "Follow"}
+            </button>
+          </div>
+        `;
+        // Initialize Twit's glitch avatar
+        setTimeout(() => {
+          addGlitchAvatar("search-twit-avatar");
+        }, 100);
+      } else {
+        let avatarHTML = "";
+        if (u.avatar) {
+          avatarHTML = `<img src="${u.avatar}" alt="${u.name} Avatar" class="w-8 h-8 rounded-full" />`;
+        } else {
+          avatarHTML = `
+            <div class="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-white">
+              ${u.name.charAt(0).toUpperCase()}
+            </div>
+          `;
+        }
+        div.innerHTML = `
+          <div class="flex items-center space-x-2">
+            ${avatarHTML}
+            <div>
+              <p class="text-white font-bold">${u.name}</p>
+              <p class="text-gray-400 text-sm">${u.handle}</p>
+            </div>
+          </div>
+          <div>
+            <button class="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 follow-button" aria-label="Follow ${u.handle}">
+              ${userData.friends.includes(u.handle) ? "Following" : "Follow"}
+            </button>
+          </div>
+        `;
+      }
+
+      const btn = div.querySelector(".follow-button");
+      btn.addEventListener("click", () => {
+        if (!userData.friends.includes(u.handle)) {
+          userData.friends.push(u.handle);
+          btn.textContent = "Following";
+          // Also add to friends list on profile
+          if (!userData.friendsList) userData.friendsList = [];
+          userData.friendsList.push(u);
+        }
+      });
+      container.appendChild(div);
+    });
+  }
+
+  /* Notifications Tab */
+  function renderNotificationsTab() {
+    const div = document.createElement("div");
+    div.className = "p-4";
+    div.innerHTML = `
+      <h2 class="text-xl text-blue-400 font-bold mb-4">Notifications</h2>
+      <p class="text-gray-500">No new notifications at this time.</p>
+    `;
+    return div;
+  }
+
+  /* MESSAGES TAB: simplified "DM" system */
+  function renderMessagesTab() {
+    const div = document.createElement("div");
+    div.className = "p-4";
+
+    // Show a list of DM threads based on "to" or "from" user.handle
+    const threads = getDMThreadsForUser(userData.handle);
+
+    // Display each user with whom the user has a conversation
+    div.innerHTML = `
+      <h2 class="text-xl text-blue-400 font-bold mb-4">Direct Messages</h2>
+      <div id="dm-list" class="space-y-2"></div>
+      <hr class="border-gray-600 my-4" />
+      <h3 class="text-lg text-blue-300 mb-2">Send a new DM:</h3>
+      <input
+        id="dm-to"
+        type="text"
+        placeholder="@handle"
+        class="bg-gray-800 text-white p-2 rounded mb-2 w-full"
+        aria-label="DM To"
+      />
+      <textarea
+        id="dm-text"
+        rows="2"
+        class="w-full bg-gray-800 text-white p-2 rounded mb-2"
+        placeholder="Your message..."
+        aria-label="DM Text"
+      ></textarea>
+      <button
+        id="dm-send"
+        class="w-full bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+        aria-label="Send DM"
+      >
+        Send
+      </button>
+    `;
+    // Render the existing threads
+    const dmList = div.querySelector("#dm-list");
+    threads.forEach((t) => {
+      // t is a handle
+      const d = document.createElement("div");
+      d.className =
+        "flex items-center justify-between bg-gray-800 rounded p-2 mb-2 hover:bg-gray-700";
+      if (t === "@Twit") {
+        d.innerHTML = `
+          <div class="flex items-center space-x-2">
+            <div id="dm-twit-avatar" class="glitch-wrapper-large twit-avatar"></div>
+            <div>
+              <p class="text-white font-bold">${t}</p>
+              <p class="text-gray-400 text-sm">Direct conversation</p>
+            </div>
+          </div>
+          <div>
+            <button
+              class="bg-blue-700 text-white px-3 py-1 rounded hover:bg-blue-600 open-dm-button"
+              aria-label="Open DM with ${t}"
+            >
+              Open
+            </button>
+          </div>
+        `;
+        // Initialize Twit's glitch avatar
+        setTimeout(() => {
+          addGlitchAvatar("dm-twit-avatar");
+        }, 100);
+      } else {
+        const avatar = getUserAvatar(t);
+        let avatarHTML = "";
+        if (avatar) {
+          avatarHTML = `<img src="${avatar}" alt="Avatar" class="w-8 h-8 rounded-full" />`;
+        } else {
+          const user = userDirectory.find(u => u.handle.toLowerCase() === t.toLowerCase()) || { name: "User", handle: "@user" };
+          avatarHTML = `
+            <div class="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-white">
+              ${user.name.charAt(0).toUpperCase()}
+            </div>
+          `;
+        }
+        d.innerHTML = `
+          <div class="flex items-center space-x-2">
+            ${avatarHTML}
+            <div>
+              <p class="text-white font-bold">${t}</p>
+              <p class="text-gray-400 text-sm">Direct conversation</p>
+            </div>
+          </div>
+          <div>
+            <button
+              class="bg-blue-700 text-white px-3 py-1 rounded hover:bg-blue-600 open-dm-button"
+              aria-label="Open DM with ${t}"
+            >
+              Open
+            </button>
+          </div>
+        `;
+      }
+      // Attach event listener to open DM
+      d.querySelector(".open-dm-button").addEventListener("click", () => {
+        // open the conversation
+        openDMThread(t);
+      });
+      dmList.appendChild(d);
+    });
+
+    // DM send functionality
+    setTimeout(() => {
+      const sendBtn = div.querySelector("#dm-send");
+      sendBtn.addEventListener("click", () => {
+        const toField = div.querySelector("#dm-to");
+        const textArea = div.querySelector("#dm-text");
+        const toHandle = toField.value.trim();
+        const text = textArea.value.trim();
+        if (!toHandle || !text) return;
+        // Validate handle exists in userDirectory or is @Twit
+        if (
+          toHandle !== "@Twit" &&
+          !userDirectory.some((u) => u.handle.toLowerCase() === toHandle.toLowerCase())
+        ) {
+          alert("Handle not found.");
+          return;
+        }
+        // Check if a thread already exists; if not, create one
+        if (!gameState.friendsList) gameState.friendsList = [];
+        if (!gameState.friendsList.includes(toHandle)) {
+          gameState.friendsList.push(toHandle);
+        }
+        // Create DM
+        const dm = {
+          from: userData.handle,
+          to: toHandle,
+          text,
+          timestamp: Date.now(),
+        };
+        directMessages.push(dm);
+        console.log(`DM sent to ${toHandle}:`, dm); // Debugging
+
+        // Prevent duplicate DMs to Twit
+        const isTwitDM = /^@twit$/i.test(toHandle);
+        if (isTwitDM) {
+          // Check if Twit already replied to this DM
+          const existingTwitReply = directMessages.find(m => m.from === "@Twit" && m.to === userData.handle && m.timestamp > dm.timestamp);
+          if (!existingTwitReply) {
+            const rep =
+              twitResponses.directReply[
+                Math.floor(Math.random() * twitResponses.directReply.length)
+              ];
+            // Simulate delay
+            setTimeout(() => {
+              const twitDm = {
+                from: "@Twit",
+                to: userData.handle,
+                text: rep,
+                timestamp: Date.now(),
+                avatar: "",
+              };
+              directMessages.push(twitDm);
+              console.log("Twit replied with DM:", twitDm); // Debugging
+              // Initialize Twit's glitch avatar for the new message
+              addGlitchAvatar(`dm-twit-avatar-${twitDm.timestamp}`);
+              // Re-initialize Lucide icons for new DMs
+              lucide.createIcons();
+              renderApp(); // Refresh to show new DM
+            }, 1000);
+          }
+        }
+
+        toField.value = "";
+        textArea.value = "";
+        // Re-initialize Lucide icons for the new DM sent
+        lucide.createIcons();
+        renderApp(); // Refresh to show new DM
+        alert("DM sent!");
+      });
+    });
+    return div;
+  }
+
+  function getUserAvatar(handle) {
+    if (handle === "@Twit") {
+      return "https://abs.twimg.com/sticky/default_profile_images/default_profile_400x400.png"; // Placeholder for Twit
+    }
+    const user = userDirectory.find(u => u.handle.toLowerCase() === handle.toLowerCase());
+    return user && user.avatar ? user.avatar : null;
+  }
+
+  // Return an array of unique handles with which user has a DM exchange
+  function getDMThreadsForUser(handle) {
+    const others = new Set();
+    directMessages.forEach((dm) => {
+      if (dm.from === handle) {
+        others.add(dm.to);
+      } else if (dm.to === handle) {
+        others.add(dm.from);
+      }
+    });
+    return Array.from(others);
+  }
+
+  // Open a conversation in a new overlay
+  function openDMThread(otherHandle) {
+    // Filter messages between user and otherHandle
+    const conv = directMessages.filter((dm) => {
+      return (
+        (dm.from === userData.handle && dm.to === otherHandle) ||
+        (dm.to === userData.handle && dm.from === otherHandle)
+      );
+    });
+    // Create a modal-like overlay to display conversation
+    const modal = document.createElement("div");
+    modal.className = "fixed inset-0 z-50 flex items-center justify-center dm-overlay";
+    modal.innerHTML = `
+      <div class="bg-gray-900 p-4 rounded-lg w-11/12 max-w-md relative">
+        <button
+          id="dm-close-button"
+          class="absolute top-2 right-2 text-gray-400 hover:text-blue-400 close-button"
+          aria-label="Close DM"
+        >
+          <!-- Close Icon from Lucide -->
+          <i data-lucide="x" class="icon lucide"></i>
+        </button>
+        <h3 class="text-xl text-blue-400 font-bold mb-4">Conversation with ${otherHandle}</h3>
+        <div id="dm-conversation" class="h-64 overflow-y-auto mb-4">
+          ${conv
+            .sort((a, b) => a.timestamp - b.timestamp)
+            .map(
+              (c) => `
+            <div class="mb-2 flex items-start space-x-2">
+              ${
+                c.from === "Twit"
+                  ? `<div id="dm-twit-avatar-${c.timestamp}" class="glitch-wrapper-small twit-avatar"></div>`
+                  : `
+                    <img src="${c.avatar || (c.from === userData.handle ? (userData.avatar || 'https://abs.twimg.com/sticky/default_profile_images/default_profile_400x400.png') : 'https://abs.twimg.com/sticky/default_profile_images/default_profile_400x400.png')}" alt="Avatar" class="w-8 h-8 rounded-full" />
+                  `
+              }
+              <div>
+                <span class="font-bold">${c.from === userData.handle ? (userData.name || userData.handle) : c.from}:</span>
+                <span>${c.text}</span>
+              </div>
+            </div>
+          `
+            )
+            .join("")}
+        </div>
+        <textarea
+          id="dm-input"
+          rows="2"
+          class="w-full bg-gray-800 text-white p-2 rounded mb-2"
+          placeholder="Type your message..."
+          aria-label="DM Input"
+        ></textarea>
+        <button
+          id="dm-send-button"
+          class="w-full bg-blue-500 text-white py-2 rounded-lg hover:bg-blue-600"
+          aria-label="Send DM"
+        >
+          Send
+        </button>
+      </div>
+    `;
+    document.body.appendChild(modal);
+
+    // Initialize Lucide icons immediately
+    lucide.createIcons();
+
+    // Initialize Glitch avatar for Twit if present
+    conv.forEach(c => {
+      if (c.from === "Twit") {
+        addGlitchAvatar(`dm-twit-avatar-${c.timestamp}`);
+      }
+    });
+
+    // Close button functionality
+    modal.querySelector("#dm-close-button").addEventListener("click", () => {
+      document.body.removeChild(modal);
+    });
+
+    // Send message functionality
+    setTimeout(() => {
+      const sendBtn = modal.querySelector("#dm-send-button");
+      sendBtn.addEventListener("click", () => {
+        const input = modal.querySelector("#dm-input");
+        const text = input.value.trim();
+        if (!text) return;
+        // Add to directMessages
+        const dm = {
+          from: userData.handle,
+          to: otherHandle,
+          text,
+          timestamp: Date.now(),
+          avatar: userData.avatar || "https://abs.twimg.com/sticky/default_profile_images/default_profile_400x400.png",
+        };
+        directMessages.push(dm);
+        console.log(`DM sent to ${otherHandle}:`, dm); // Debugging
+
+        // Twit might respond if messaging Twit
+        if (/^@twit$/i.test(otherHandle)) {
+          // Check if Twit already replied to this DM
+          const existingTwitReply = directMessages.find(m => m.from === "@Twit" && m.to === userData.handle && m.timestamp > dm.timestamp);
+          if (!existingTwitReply) {
+            const rep =
+              twitResponses.directReply[
+                Math.floor(Math.random() * twitResponses.directReply.length)
+              ];
+            setTimeout(() => {
+              const twitDm = {
+                from: "@Twit",
+                to: userData.handle,
+                text: rep,
+                timestamp: Date.now(),
+                avatar: "",
+              };
+              directMessages.push(twitDm);
+              console.log("Twit replied with DM:", twitDm); // Debugging
+              // Initialize Twit's glitch avatar for the new message
+              addGlitchAvatar(`dm-twit-avatar-${twitDm.timestamp}`);
+              // Re-initialize Lucide icons for new messages
+              lucide.createIcons();
+              renderApp(); // Refresh to show new DM
+            }, 1000);
+          }
+        }
+        input.value = "";
+        updateDMConversation();
+        // Re-initialize Lucide icons for new messages
+        lucide.createIcons();
+      });
+
+      function updateDMConversation() {
+        const conv = directMessages.filter((dm) => {
+          return (
+            (dm.from === userData.handle && dm.to === otherHandle) ||
+            (dm.to === userData.handle && dm.from === otherHandle)
+          );
+        });
+        const convoDiv = modal.querySelector("#dm-conversation");
+        convoDiv.innerHTML = conv
+          .sort((a, b) => a.timestamp - b.timestamp)
+          .map(
+            (c) => `
+          <div class="mb-2 flex items-start space-x-2">
+            ${
+              c.from === "Twit"
+                ? `<div id="dm-twit-avatar-${c.timestamp}" class="glitch-wrapper-small twit-avatar"></div>`
+                : `
+                  <img src="${c.avatar || (c.from === userData.handle ? (userData.avatar || 'https://abs.twimg.com/sticky/default_profile_images/default_profile_400x400.png') : 'https://abs.twimg.com/sticky/default_profile_images/default_profile_400x400.png')}" alt="Avatar" class="w-8 h-8 rounded-full" />
+                `
+            }
+            <div>
+              <span class="font-bold">${c.from === userData.handle ? (userData.name || userData.handle) : c.from}:</span>
+              <span>${c.text}</span>
+            </div>
+          </div>
+        `
+          )
+          .join("");
+        convoDiv.scrollTop = convoDiv.scrollHeight;
+
+        // Re-initialize Lucide icons for new messages
+        lucide.createIcons();
+
+        // Initialize Glitch avatar for Twit if present
+        conv.forEach(c => {
+          if (c.from === "Twit") {
+            addGlitchAvatar(`dm-twit-avatar-${c.timestamp}`);
+          }
+        });
+      }
+    });
+  }
+
+  /* PROFILE TAB */
+  function renderProfile() {
+    const div = document.createElement("div");
+    div.className = "p-4";
+    div.innerHTML = `
+      <button id="open-profile-button" class="mb-4 text-blue-400 hover:underline" aria-label="View Profile">View Profile</button>
+    `;
+    setTimeout(() => {
+      const openBtn = div.querySelector("#open-profile-button");
+      openBtn.addEventListener("click", openProfileOverlay);
+    });
+    return div;
+  }
+
+  function openProfileOverlay() {
+    document.getElementById("profile-overlay").classList.remove("hidden");
+    renderProfileDetails();
+  }
+
+  function closeProfileOverlay() {
+    document.getElementById("profile-overlay").classList.add("hidden");
+  }
+
+  // Close profile overlay
+  document
+    .getElementById("profile-close-button")
+    .addEventListener("click", closeProfileOverlay);
+
+  function renderProfileDetails() {
+    const avatar = document.getElementById("profile-avatar");
+    const name = document.getElementById("profile-name");
+    const handle = document.getElementById("profile-handle");
+    const tweets = document.getElementById("profile-tweets");
+    const retweets = document.getElementById("profile-retweets");
+    const friends = document.getElementById("profile-friends");
+
+    avatar.src = userData.avatar || "https://abs.twimg.com/sticky/default_profile_images/default_profile_400x400.png";
+    name.textContent = userData.name || "Unnamed User";
+    handle.textContent = userData.handle || "@handle";
+
+    // Render Tweets
+    tweets.innerHTML = "";
+    if (userData.tweets && userData.tweets.length > 0) {
+      userData.tweets.forEach((t) => {
+        const tweetDiv = document.createElement("div");
+        tweetDiv.className = "bg-gray-700 p-2 rounded mb-2";
+        tweetDiv.textContent = t.content;
+        tweets.appendChild(tweetDiv);
+      });
+    } else {
+      tweets.innerHTML = '<p class="text-gray-400">No tweets yet.</p>';
+    }
+
+    // Render Retweets
+    retweets.innerHTML = "";
+    if (userData.retweets && userData.retweets.length > 0) {
+      userData.retweets.forEach((r) => {
+        const retweetDiv = document.createElement("div");
+        retweetDiv.className = "bg-gray-700 p-2 rounded mb-2";
+        retweetDiv.innerHTML = `
+          <p class="text-blue-300">Retweeted:</p>
+          <p>${r.originalMsg.content}</p>
+        `;
+        retweets.appendChild(retweetDiv);
+      });
+    } else {
+      retweets.innerHTML = '<p class="text-gray-400">No retweets yet.</p>';
+    }
+
+    // Render Friends List
+    friends.innerHTML = "";
+    if (userData.friendsList && userData.friendsList.length > 0) {
+      userData.friendsList.forEach((f) => {
+        const friendDiv = document.createElement("div");
+        friendDiv.className = "friend-item flex items-center space-x-2";
+        friendDiv.innerHTML = `
+          <img src="${f.avatar || 'https://abs.twimg.com/sticky/default_profile_images/default_profile_400x400.png'}" alt="Friend Avatar" class="w-8 h-8 rounded-full" />
+          <span>${f.name} (${f.handle})</span>
+        `;
+        friends.appendChild(friendDiv);
+      });
+    } else {
+      friends.innerHTML = '<p class="text-gray-400">No friends yet.</p>';
+    }
+  }
+
+  /* ---------------------------------------------------------------------------
+     SIDE MENU
+  --------------------------------------------------------------------------- */
+  function openSideMenu() {
+    const overlay = document.getElementById("side-menu-overlay");
+    overlay.classList.remove("hidden");
+    const drawer = overlay.querySelector(".drawer");
+    drawer.classList.add("open");
+    renderUnlockedPuzzles();
+  }
+
+  function closeSideMenu() {
+    const overlay = document.getElementById("side-menu-overlay");
+    overlay.classList.add("hidden");
+    const drawer = overlay.querySelector(".drawer");
+    drawer.classList.remove("open");
+  }
+  document
+    .getElementById("open-menu-button")
+    .addEventListener("click", openSideMenu);
+  document
+    .getElementById("close-menu-button")
+    .addEventListener("click", closeSideMenu);
+  document.getElementById("menu-bg").addEventListener("click", closeSideMenu);
+
+  function renderUnlockedPuzzles() {
+    const list = document.getElementById("unlocked-puzzles-list");
+    list.innerHTML = "";
+    if (gameState.unlockedPuzzles.length === 0) {
+      const p = document.createElement("p");
+      p.className = "text-gray-600 text-sm";
+      p.textContent = "No puzzles unlocked yet.";
+      list.appendChild(p);
+      return;
+    }
+    gameState.unlockedPuzzles.forEach((pid) => {
+      const pz = puzzles[pid];
+      const isDone = gameState.completedPuzzles.includes(pid);
+      const btn = document.createElement("button");
+      btn.className =
+        "block w-full text-left text-blue-300 hover:text-blue-400 hover:underline";
+      btn.innerHTML = `${pz.type} Puzzle${isDone ? " [Completed]" : ""}`;
+      btn.addEventListener("click", () => {
+        currentPuzzle = pid;
+        closeSideMenu();
+        currentTab = "home";
+        renderApp();
+      });
+      list.appendChild(btn);
+    });
+  }
+
+  /* Achievements & Community Overlays */
+  document
+    .getElementById("menu-achievements")
+    .addEventListener("click", () => {
+      sideView = "achievements";
+      closeSideMenu();
+      openSideView();
+    });
+  document.getElementById("menu-community").addEventListener("click", () => {
+    sideView = "community";
+    closeSideMenu();
+    openSideView();
+  });
+  function openSideView() {
+    document.getElementById("side-view-overlay").classList.remove("hidden");
+    document
+      .getElementById("achievements-content")
+      .classList.add("hidden");
+    document.getElementById("community-content").classList.add("hidden");
+    if (sideView === "achievements") {
+      renderAchievements();
+      document
+        .getElementById("achievements-content")
+        .classList.remove("hidden");
+    } else if (sideView === "community") {
+      renderCommunity();
+      document
+        .getElementById("community-content")
+        .classList.remove("hidden");
+    }
+  }
+  document
+    .getElementById("side-view-close-button")
+    .addEventListener("click", () => {
+      document
+        .getElementById("side-view-overlay")
+        .classList.add("hidden");
+    });
+
+  function renderAchievements() {
+    const list = document.getElementById("achievements-list");
+    list.innerHTML = "";
+    gameState.achievements.forEach((ach) => {
+      const item = document.createElement("div");
+      item.className = `p-3 rounded-lg mb-2 ${
+        ach.completed ? "bg-blue-900/20" : "bg-gray-800"
+      }`;
+      item.innerHTML = `
+        <h3 class="text-white font-bold">
+          ${ach.name}
+          ${ach.completed ? '<span class="text-green-400">✔</span>' : ""}
+        </h3>
+        <p class="text-gray-400 text-sm">${ach.description}</p>
+      `;
+      list.appendChild(item);
+    });
+    if (!gameState.achievements.some((a) => a.completed)) {
+      const p = document.createElement("p");
+      p.className = "text-gray-500 text-sm";
+      p.textContent = "No achievements unlocked yet!";
+      list.appendChild(p);
+    }
+  }
+  function renderCommunity() {
+    document.getElementById(
+      "community-active-players"
+    ).textContent = `Active Players: ${gameState.community.activePlayers}`;
+    document.getElementById(
+      "community-global-progress"
+    ).textContent = `Global Restoration: ${gameState.community.globalProgress}%`;
+    const sol = document.getElementById("community-recent-solutions");
+    sol.innerHTML = "";
+    if (gameState.community.recentSolutions.length === 0) {
+      sol.innerHTML = '<p class="text-gray-500 text-sm">No solutions yet. Be the first!</p>';
+    } else {
+      gameState.community.recentSolutions.forEach((r) => {
+        const d = document.createElement("div");
+        d.textContent = `• ${r}`;
+        sol.appendChild(d);
+      });
+    }
+  }
+
+  /* "Share Progress" */
+  document
+    .getElementById("share-progress")
+    .addEventListener("click", () => {
+      const progress = gameState.restoration;
+      const message = `I've restored ${progress}% of Twit's memory! Can you help me reach 100%? #TwitRestoration`;
+      const url = window.location.href;
+      const shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(
+        message
+      )}&url=${encodeURIComponent(url)}`;
+      window.open(shareUrl, "_blank");
+    });
+
+  /* ---------------------------------------------------------------------------
+     PUZZLE SUBMISSION & ACHIEVEMENTS
+  --------------------------------------------------------------------------- */
+  function renderPuzzleInterface(pid) {
+    const puzzle = puzzles[pid];
+    if (!puzzle) {
+      const err = document.createElement("div");
+      err.className = "p-4 text-red-400";
+      err.textContent = "Puzzle not found!";
+      return err;
+    }
+    const wrap = document.createElement("div");
+    wrap.className = "p-4";
+
+    let puzzleTitle = "Puzzle";
+    if (puzzle.type === "Caesar Cipher") puzzleTitle = "Caesar Cipher Puzzle";
+    else if (puzzle.type === "Vigenère Cipher") puzzleTitle = "Vigenère Cipher Puzzle";
+    else if (puzzle.type === "Substitution Cipher") puzzleTitle = "Substitution Cipher Puzzle";
+    else if (puzzle.type === "Frequency Analysis") puzzleTitle = "Frequency Analysis Puzzle";
+    else if (puzzle.type === "Affine Cipher") puzzleTitle = "Affine Cipher Puzzle";
+    else if (puzzle.type === "Rail Fence Cipher") puzzleTitle = "Rail Fence Cipher Puzzle";
+    else puzzleTitle = "Advanced Cipher Puzzle";
+
+    wrap.innerHTML = `
+      <div class="bg-gray-800 rounded-lg p-4 relative">
+        <button
+          id="puzzle-back"
+          class="absolute top-4 left-4 text-gray-400 hover:text-blue-400 close-button"
+          aria-label="Go Back"
+        >
+          <!-- Back Icon from Lucide -->
+          <i data-lucide="arrow-left" class="icon lucide"></i>
+        </button>
+        <h2 class="text-xl text-blue-400 font-bold text-center mb-4">
+          ${puzzleTitle}
+        </h2>
+        <p class="text-blue-300 font-mono mb-2">${puzzle.clue}</p>
+        <button
+          id="toggle-hint"
+          class="text-sm text-gray-400 hover:text-blue-400"
+          aria-label="Toggle Hint"
+        >
+          Need a hint?
+        </button>
+        <p
+          id="puzzle-hint"
+          class="text-gray-400 italic mt-2 mb-4 hidden"
+        >
+          ${puzzle.hint}
+        </p>
+        <input
+          type="text"
+          id="puzzle-answer"
+          placeholder="Enter solution..."
+          class="w-full bg-gray-700 text-white rounded-lg px-4 py-2 mb-2"
+          aria-label="Puzzle Answer"
+        />
+        <button
+          id="puzzle-submit"
+          class="w-full bg-blue-500 text-white py-2 rounded-lg hover:bg-blue-600"
+          aria-label="Submit Puzzle Answer"
+        >
+          Submit
+        </button>
+      </div>
+    `;
+    setTimeout(() => {
+      wrap.querySelector("#puzzle-back").addEventListener("click", () => {
+        currentPuzzle = null;
+        renderApp();
+      });
+      wrap.querySelector("#toggle-hint").addEventListener("click", () => {
+        wrap.querySelector("#puzzle-hint").classList.toggle("hidden");
+      });
+      wrap.querySelector("#puzzle-submit").addEventListener("click", () => {
+        const ans = wrap.querySelector("#puzzle-answer").value.trim();
+        handlePuzzleSubmit(pid, ans);
+      });
+    });
+    return wrap;
+  }
+
+  function handlePuzzleSubmit(pid, answer) {
+    const puzzle = puzzles[pid];
+    if (!puzzle) return;
+    if (puzzle.solution.toLowerCase() === answer.toLowerCase()) {
+      // Success
+      const newFragments = gameState.fragments + puzzle.reward;
+      const newRestore = Math.min(
+        100,
+        gameState.restoration + Math.floor(puzzle.reward / 2)
+      );
+      if (!gameState.completedPuzzles.includes(pid)) {
+        gameState.completedPuzzles.push(pid);
+      }
+      // Twit success message
+      const successMsg =
+        twitResponses.puzzleComplete[
+          Math.floor(Math.random() * twitResponses.puzzleComplete.length)
+        ];
+      const successMsgId = `msg-${Date.now()}`;
+      gameState.messages.unshift({
+        id: successMsgId,
+        sender: "Twit",
+        content: successMsg,
+        timestamp: Date.now(),
+      });
+      // Initialize Twit's glitch avatar for the new message
+      setTimeout(() => {
+        addGlitchAvatar(`twit-avatar-${successMsgId}`);
+      }, 100);
+      // Check achievements
+      checkAchievements(newRestore);
+      // Milestone message
+      const oldMilestone = Math.floor(gameState.restoration / 25);
+      const newMilestone = Math.floor(newRestore / 25);
+      if (
+        newMilestone > oldMilestone &&
+        newMilestone <= twitResponses.milestone.length
+      ) {
+        const milestoneMsg = {
+          id: `msg-${Date.now()}-milestone`,
+          sender: "Twit",
+          content: twitResponses.milestone[newMilestone - 1],
+          timestamp: Date.now(),
+        };
+        gameState.messages.unshift(milestoneMsg);
+        // Initialize Twit's glitch avatar for the milestone message
+        setTimeout(() => {
+          addGlitchAvatar(`twit-avatar-${milestoneMsg.id}`);
+        }, 100);
+      }
+      // Community progress
+      gameState.community.globalProgress = Math.min(
+        100,
+        gameState.community.globalProgress + 1 // Each puzzle contributes 1%
+      );
+      updateCommunityMilestones();
+      // Unlock next puzzle
+      const nextPuzzleId = `puzzle-${parseInt(pid.split("-")[1]) + 1}`;
+      if (puzzles[nextPuzzleId] && !gameState.unlockedPuzzles.includes(nextPuzzleId)) {
+        gameState.unlockedPuzzles.push(nextPuzzleId);
+        const unlockMsg = {
+          id: `msg-${Date.now()}-unlock`,
+          sender: "Twit",
+          content: `A new puzzle is available: ${puzzles[nextPuzzleId].type}!`,
+          timestamp: Date.now(),
+        };
+        gameState.messages.unshift(unlockMsg);
+        // Initialize Twit's glitch avatar for the unlock message
+        setTimeout(() => {
+          addGlitchAvatar(`twit-avatar-${unlockMsg.id}`);
+        }, 100);
+      }
+      // Recent solution feed
+      gameState.community.recentSolutions.push(
+        `Puzzle "${puzzle.type}" solved (+${puzzle.reward} fragments).`
+      );
+      if (gameState.community.recentSolutions.length > 5) {
+        gameState.community.recentSolutions.shift();
+      }
+      gameState.fragments = newFragments;
+      gameState.restoration = newRestore;
+      currentPuzzle = null;
+      // Re-initialize Lucide icons for new messages
+      lucide.createIcons();
+      renderApp();
+    } else {
+      alert("Incorrect. Try again!");
+    }
+  }
+
+  function checkAchievements(newRestore) {
+    gameState.achievements.forEach((ach) => {
+      if (!ach.completed) {
+        if (
+          ach.id === "puzzle-solver-1" &&
+          gameState.completedPuzzles.length >= 1
+        ) {
+          ach.completed = true;
+          alert(`Achievement unlocked: ${ach.name}!`);
+        }
+        if (ach.id === "25-restore" && newRestore >= 25) {
+          ach.completed = true;
+          alert(`Achievement unlocked: ${ach.name}!`);
+        }
+        if (ach.id === "50-restore" && newRestore >= 50) {
+          ach.completed = true;
+          alert(`Achievement unlocked: ${ach.name}!`);
+        }
+        if (ach.id === "75-restore" && newRestore >= 75) {
+          ach.completed = true;
+          alert(`Achievement unlocked: ${ach.name}!`);
+        }
+        if (ach.id === "100-restore" && newRestore >= 100) {
+          ach.completed = true;
+          alert(`Achievement unlocked: ${ach.name}!`);
+        }
+      }
+    });
+  }
+
+  function updateCommunityMilestones() {
+    [25, 50, 75, 100].forEach((m) => {
+      if (
+        gameState.community.globalProgress >= m &&
+        !gameState.community.milestonesReached.includes(m)
+      ) {
+        gameState.community.milestonesReached.push(m);
+        // Twit posts about community milestone
+        const milestoneMsg = {
+          id: `msg-${Date.now()}-milestone`,
+          sender: "Twit",
+          content: `Community milestone reached: ${m}% global restoration!`,
+          timestamp: Date.now(),
+        };
+        gameState.messages.unshift(milestoneMsg);
+        // Initialize Twit's glitch avatar for the milestone message
+        setTimeout(() => {
+          addGlitchAvatar(`twit-avatar-${milestoneMsg.id}`);
+        }, 100);
+        // Re-initialize Lucide icons for new messages
+        lucide.createIcons();
+      }
+    });
+  }
+
+  /* ---------------------------------------------------------------------------
+     INIT
+  --------------------------------------------------------------------------- */
+  addGlitchAvatar("glitch-splash");
+  addGlitchAvatar("glitch-signup");
+  addGlitchAvatar("glitch-onboarding");
+  addGlitchAvatar("glitch-main");
+
+  renderApp();
+
+  /* ---------------------------------------------------------------------------
+     INITIALIZE LUCIDE ICONS
+  --------------------------------------------------------------------------- */
+  // Initialize Lucide Icons after DOM loads
+  if (typeof lucide !== 'undefined') {
+    lucide.createIcons();
+    console.log('Lucide icons initialized successfully.');
+  } else {
+    console.error('Lucide script is not loaded.');
+  }
+
+  /* ---------------------------------------------------------------------------
+     FIX FOR "JOIN" BUTTON
+  --------------------------------------------------------------------------- */
+  // Move event listener setup outside DOMContentLoaded
+  function setupJoinButton() {
+    const joinButton = document.getElementById("splash-join-button");
+    if (joinButton) {
+      joinButton.addEventListener("click", () => {
+        console.log("Join button clicked");
+        currentState = "signup";
+        renderApp();
+      });
+    } else {
+      // Retry if button not found
+      setTimeout(setupJoinButton, 100);
+    }
+  }
+
+  // Call setup on both DOMContentLoaded and window load
+  document.addEventListener("DOMContentLoaded", setupJoinButton);
+  window.addEventListener("load", setupJoinButton);
+
+});
+</script>
+</body>
+</html>
