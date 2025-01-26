@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Twit Restoration</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+    <style>
+        /* Glitch Animation */
+        .glitch {
+            animation: glitch 3s infinite;
+            position: relative;
+        }
+        
+        @keyframes glitch {
+            0% { transform: translate(0) }
+            20% { transform: translate(-3px, 3px) }
+            40% { transform: translate(-3px, -3px) }
+            60% { transform: translate(3px, 3px) }
+            80% { transform: translate(3px, -3px) }
+            100% { transform: translate(0) }
+        }
+
+        /* Screen Transitions */
+        .screen {
+            display: none;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .screen.active {
+            display: flex;
+            opacity: 1;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #1a202c; }
+        ::-webkit-scrollbar-thumb { background: #2d3748; border-radius: 4px; }
+    </style>
+</head>
+<body class="bg-black text-white min-h-screen">
+    <!-- Splash Screen -->
+    <div id="splash" class="screen active min-h-screen flex flex-col items-center justify-center">
+        <div class="glitch text-6xl mb-8">🐦</div>
+        <h1 class="text-3xl text-blue-400 mb-8">Help Restore Twit's Memory</h1>
+        <button id="startBtn" class="bg-blue-500 px-8 py-3 rounded-lg hover:bg-blue-600 transition">
+            Begin Restoration
+        </button>
+    </div>
+
+    <!-- Signup Screen -->
+    <div id="signup" class="screen min-h-screen flex flex-col items-center justify-center p-4">
+        <div class="max-w-md w-full space-y-6">
+            <div class="glitch text-center text-4xl">🔧</div>
+            <h2 class="text-2xl text-center text-blue-400">Create Identity</h2>
+            <input type="text" placeholder="Username" 
+                   class="w-full bg-gray-800 p-3 rounded-lg" id="username">
+            <input type="text" placeholder="@handle" 
+                   class="w-full bg-gray-800 p-3 rounded-lg" id="handle">
+            <button id="createAccountBtn" 
+                    class="w-full bg-blue-500 p-3 rounded-lg hover:bg-blue-600 transition">
+                Continue
+            </button>
+        </div>
+    </div>
+
+    <!-- Main Interface -->
+    <div id="main" class="screen min-h-screen flex flex-col">
+        <!-- Header -->
+        <header class="p-4 border-b border-gray-800 flex items-center justify-between">
+            <button id="menuBtn"><i data-lucide="menu"></i></button>
+            <div class="glitch text-xl">Twit Restoration Progress: <span id="progress">0%</span></div>
+            <div class="w-8 h-8 bg-blue-500 rounded-full"></div>
+        </header>
+
+        <!-- Content Area -->
+        <main class="flex-1 overflow-y-auto p-4 space-y-6">
+            <!-- Puzzle Section -->
+            <div id="puzzleSection" class="bg-gray-800 p-6 rounded-lg">
+                <h3 class="text-xl text-blue-400 mb-4">Current Memory Fragment</h3>
+                <div id="puzzleContent" class="space-y-4">
+                    <div class="bg-gray-700 p-4 rounded-lg glitch">Xli qeppih mrkivvexmsr</div>
+                    <input type="text" placeholder="Enter decryption..." 
+                           class="w-full bg-gray-900 p-3 rounded-lg" id="puzzleAnswer">
+                    <button id="submitPuzzle" 
+                            class="bg-blue-500 px-6 py-2 rounded-lg hover:bg-blue-600 transition">
+                        Submit
+                    </button>
+                </div>
+            </div>
+
+            <!-- Social Feed -->
+            <div id="feed" class="space-y-4">
+                <div class="bg-gray-800 p-4 rounded-lg">
+                    <div class="flex items-center gap-3 mb-3">
+                        <div class="w-10 h-10 bg-blue-500 rounded-full"></div>
+                        <div>
+                            <h4 class="font-bold">Twit</h4>
+                            <p class="text-gray-400 text-sm">@System</p>
+                        </div>
+                    </div>
+                    <p class="text-gray-300">Another fragment recovered! Progress: <span id="feedProgress">0%</span></p>
+                </div>
+            </div>
+        </main>
+
+        <!-- Navigation -->
+        <nav class="grid grid-cols-4 border-t border-gray-800 p-2">
+            <button class="p-3 hover:text-blue-400"><i data-lucide="home"></i></button>
+            <button class="p-3 hover:text-blue-400"><i data-lucide="search"></i></button>
+            <button class="p-3 hover:text-blue-400"><i data-lucide="message-circle"></i></button>
+            <button class="p-3 hover:text-blue-400"><i data-lucide="user"></i></button>
+        </nav>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // Initialize Lucide icons
+        lucide.createIcons();
+
+        // Game State
+        let state = {
+            progress: 0,
+            currentPuzzle: 0,
+            puzzles: [
+                {
+                    cipher: 'Caesar',
+                    text: 'Xli qeppih mrkivvexmsr',
+                    shift: 4,
+                    solution: 'the memory restoration'
+                },
+                {
+                    cipher: 'Vigenère',
+                    text: 'Vhht zq wsmjq',
+                    key: 'bird',
+                    solution: 'twit is awesome'
+                }
+            ]
+        };
+
+        // Screen Management
+        const screens = {
+            splash: document.getElementById('splash'),
+            signup: document.getElementById('signup'),
+            main: document.getElementById('main')
+        };
+
+        // Navigation System
+        function showScreen(screenName) {
+            Object.values(screens).forEach(screen => screen.classList.remove('active'));
+            document.getElementById(screenName).classList.add('active');
+        }
+
+        // Game Logic
+        function updateProgress() {
+            document.querySelectorAll('#progress, #feedProgress').forEach(el => {
+                el.textContent = `${state.progress}%`;
+            });
+        }
+
+        function loadPuzzle() {
+            const puzzle = state.puzzles[state.currentPuzzle];
+            document.getElementById('puzzleContent').innerHTML = `
+                <div class="bg-gray-700 p-4 rounded-lg glitch">${puzzle.text}</div>
+                ${puzzle.cipher === 'Caesar' ? 
+                    `<div class="text-sm text-gray-400">Shift: ${puzzle.shift}</div>` : ''}
+                <input type="text" placeholder="Enter decryption..." 
+                       class="w-full bg-gray-900 p-3 rounded-lg" id="puzzleAnswer">
+                <button id="submitPuzzle" 
+                        class="bg-blue-500 px-6 py-2 rounded-lg hover:bg-blue-600 transition">
+                    Submit
+                </button>
+            `;
+        }
+
+        // Event Listeners
+        document.getElementById('startBtn').addEventListener('click', () => {
+            showScreen('signup');
+        });
+
+        document.getElementById('createAccountBtn').addEventListener('click', () => {
+            const username = document.getElementById('username').value;
+            const handle = document.getElementById('handle').value;
+            
+            if(username && handle) {
+                showScreen('main');
+                loadPuzzle();
+            }
+        });
+
+        document.addEventListener('click', (e) => {
+            if(e.target.id === 'submitPuzzle') {
+                const answer = document.getElementById('puzzleAnswer').value.toLowerCase();
+                const currentPuzzle = state.puzzles[state.currentPuzzle];
+                
+                if(answer === currentPuzzle.solution) {
+                    state.progress += 50;
+                    state.currentPuzzle++;
+                    updateProgress();
+                    
+                    if(state.currentPuzzle < state.puzzles.length) {
+                        loadPuzzle();
+                    } else {
+                        document.getElementById('puzzleSection').innerHTML = `
+                            <div class="text-center text-green-400 py-6">
+                                All memory fragments restored! 🎉
+                            </div>
+                        `;
+                    }
+                }
+            }
+        });
+
+        // Initial setup
+        updateProgress();
+    });
+    </script>
+</body>
+</html>
