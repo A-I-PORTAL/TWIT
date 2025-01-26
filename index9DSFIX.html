@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Twit Restoration</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <style>
+    /* Enhanced Glitch Effect */
+    .glitch {
+      animation: glitch 2s infinite;
+      position: relative;
+    }
+    
+    @keyframes glitch {
+      0% { transform: translate(0) }
+      20% { transform: translate(-2px, 2px) }
+      40% { transform: translate(2px, -2px) }
+      60% { transform: translate(-2px, 0) }
+      80% { transform: translate(2px, 2px) }
+      100% { transform: translate(0) }
+    }
+
+    /* Screen Management */
+    .screen {
+      display: none;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      min-height: 100vh;
+      flex-direction: column;
+    }
+    
+    .screen.active {
+      display: flex;
+      opacity: 1;
+    }
+
+    /* Progress Bar Animation */
+    .progress-bar {
+      transition: width 0.5s ease;
+    }
+  </style>
+</head>
+<body class="bg-black text-white min-h-screen flex flex-col">
+
+<!-- Splash Screen -->
+<div id="splash-screen" class="screen active items-center justify-center p-4">
+  <div class="glitch mb-8">
+    <svg class="w-24 h-24 text-blue-400" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M23.643 4.937c-.835.37-1.732.62-2.675.733.962-.576 1.7-1.49 2.048-2.578-.9.534-1.897.922-2.958 1.13-.85-.904-2.06-1.47-3.4-1.47-2.572 0-4.658 2.086-4.658 4.66 0 .364.042.718.12 1.06-3.873-.195-7.304-2.05-9.602-4.868-.4.69-.63 1.49-.63 2.342 0 1.616.823 3.043 2.072 3.878-.764-.025-1.482-.234-2.11-.583v.06c0 2.257 1.605 4.14 3.737 4.568-.392.106-.803.162-1.227.162-.3 0-.593-.028-.877-.082.593 1.85 2.313 3.198 4.352 3.234-1.595 1.25-3.604 1.995-5.786 1.995-.376 0-.747-.022-1.112-.065 2.062 1.323 4.51 2.093 7.14 2.093 8.57 0 13.255-7.098 13.255-13.254 0-.2-.005-.402-.014-.602.91-.658 1.7-1.477 2.323-2.41z"/>
+    </svg>
+  </div>
+  <h1 class="text-2xl text-blue-400 font-bold mb-6 text-center">Help me restore my memory...</h1>
+  <button id="splash-join-button" class="bg-blue-500 px-6 py-3 rounded-lg font-medium hover:bg-blue-600 transition-colors">
+    Join
+  </button>
+</div>
+
+<!-- Signup Screen -->
+<div id="signup-screen" class="screen items-center justify-center p-4">
+  <div class="max-w-sm w-full space-y-6">
+    <div class="glitch text-center mb-6">
+      <svg class="w-16 h-16 text-blue-400" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/>
+      </svg>
+    </div>
+    <input type="text" id="signup-name" placeholder="Name" 
+           class="w-full bg-gray-800 text-white px-4 py-3 rounded-lg" aria-label="Name">
+    <input type="text" id="signup-handle" placeholder="@handle" 
+           class="w-full bg-gray-800 text-white px-4 py-3 rounded-lg" aria-label="Handle">
+    <button id="signup-continue-button" 
+            class="w-full bg-blue-500 text-white py-3 rounded-lg hover:bg-blue-600 transition">
+      Continue
+    </button>
+  </div>
+</div>
+
+<!-- Onboarding Screen -->
+<div id="onboarding-screen" class="screen items-center justify-center p-4">
+  <div class="max-w-sm w-full space-y-6">
+    <div class="glitch text-center mb-6">
+      <svg class="w-16 h-16 text-blue-400" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46A7.93 7.93 0 0020 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74A7.93 7.93 0 004 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z"/>
+      </svg>
+    </div>
+    <div id="onboarding-messages" class="space-y-4 text-center">
+      <p class="text-blue-400">*systems initializing*</p>
+      <p class="text-blue-400">Welcome to the restoration program</p>
+    </div>
+    <button id="begin-restoration-button" 
+            class="bg-blue-500 text-white px-6 py-2 rounded-lg mt-6 hover:bg-blue-600 hidden transition">
+      Begin
+    </button>
+  </div>
+</div>
+
+<!-- Main Screen -->
+<div id="main-screen" class="screen">
+  <header class="border-b border-gray-800 p-4 flex items-center justify-between">
+    <button id="open-menu-button" class="text-blue-400">
+      <i data-lucide="menu"></i>
+    </button>
+    <div class="glitch">
+      <svg class="w-12 h-12 text-blue-400" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M23.643 4.937c-.835.37-1.732.62-2.675.733.962-.576 1.7-1.49 2.048-2.578-.9.534-1.897.922-2.958 1.13-.85-.904-2.06-1.47-3.4-1.47-2.572 0-4.658 2.086-4.658 4.66 0 .364.042.718.12 1.06-3.873-.195-7.304-2.05-9.602-4.868-.4.69-.63 1.49-.63 2.342 0 1.616.823 3.043 2.072 3.878-.764-.025-1.482-.234-2.11-.583v.06c0 2.257 1.605 4.14 3.737 4.568-.392.106-.803.162-1.227.162-.3 0-.593-.028-.877-.082.593 1.85 2.313 3.198 4.352 3.234-1.595 1.25-3.604 1.995-5.786 1.995-.376 0-.747-.022-1.112-.065 2.062 1.323 4.51 2.093 7.14 2.093 8.57 0 13.255-7.098 13.255-13.254 0-.2-.005-.402-.014-.602.91-.658 1.7-1.477 2.323-2.41z"/>
+      </svg>
+    </div>
+    <img id="user-avatar-top" src="" alt="User Avatar" class="w-12 h-12 rounded-full bg-gray-800">
+  </header>
+
+  <!-- Progress Section -->
+  <div class="bg-gray-800 p-4">
+    <div class="flex justify-between text-sm mb-2">
+      <span class="text-blue-400">Restoration Progress</span>
+      <span id="fragment-count" class="text-gray-400">0 fragments</span>
+    </div>
+    <div class="h-2 bg-gray-700 rounded-full">
+      <div id="restoration-bar" class="h-full bg-blue-500 rounded-full progress-bar" style="width: 0%"></div>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <main id="main-content" class="flex-1 overflow-y-auto p-4">
+    <!-- Tweet Composition -->
+    <div class="bg-gray-800 rounded-lg p-4 mb-4">
+      <textarea id="compose-text" 
+                class="w-full bg-gray-900 text-white p-2 rounded mb-2" 
+                rows="2" 
+                placeholder="What's happening?"></textarea>
+      <button id="compose-submit" 
+              class="bg-blue-500 text-white px-4 py-1 rounded hover:bg-blue-600 float-right">
+        Tweet
+      </button>
+    </div>
+
+    <!-- Feed -->
+    <div id="social-feed" class="space-y-4">
+      <!-- Sample Tweet -->
+      <div class="bg-gray-800 rounded-lg p-4">
+        <div class="flex items-center gap-3 mb-2">
+          <div class="glitch">
+            <svg class="w-10 h-10 text-blue-400" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M23.643 4.937c-.835.37-1.732.62-2.675.733.962-.576 1.7-1.49 2.048-2.578-.9.534-1.897.922-2.958 1.13-.85-.904-2.06-1.47-3.4-1.47-2.572 0-4.658 2.086-4.658 4.66 0 .364.042.718.12 1.06-3.873-.195-7.304-2.05-9.602-4.868-.4.69-.63 1.49-.63 2.342 0 1.616.823 3.043 2.072 3.878-.764-.025-1.482-.234-2.11-.583v.06c0 2.257 1.605 4.14 3.737 4.568-.392.106-.803.162-1.227.162-.3 0-.593-.028-.877-.082.593 1.85 2.313 3.198 4.352 3.234-1.595 1.25-3.604 1.995-5.786 1.995-.376 0-.747-.022-1.112-.065 2.062 1.323 4.51 2.093 7.14 2.093 8.57 0 13.255-7.098 13.255-13.254 0-.2-.005-.402-.014-.602.91-.658 1.7-1.477 2.323-2.41z"/>
+            </svg>
+          </div>
+          <div>
+            <h3 class="font-bold">Twit System</h3>
+            <p class="text-gray-400 text-sm">@twit_system</p>
+          </div>
+        </div>
+        <p class="text-gray-300">Initializing memory restoration protocol...</p>
+        <div class="flex gap-4 mt-2 text-gray-400">
+          <button class="hover:text-blue-400"><i data-lucide="message-circle"></i></button>
+          <button class="hover:text-blue-400"><i data-lucide="repeat"></i></button>
+          <button class="hover:text-blue-400"><i data-lucide="heart"></i></button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Navigation -->
+  <nav class="grid grid-cols-4 gap-2 p-2 border-t border-gray-800">
+    <button class="p-2 hover:bg-gray-800 rounded-lg"><i data-lucide="home"></i></button>
+    <button class="p-2 hover:bg-gray-800 rounded-lg"><i data-lucide="search"></i></button>
+    <button class="p-2 hover:bg-gray-800 rounded-lg"><i data-lucide="bell"></i></button>
+    <button class="p-2 hover:bg-gray-800 rounded-lg"><i data-lucide="mail"></i></button>
+  </nav>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  // Initialize Lucide icons
+  lucide.createIcons();
+
+  // Game State
+  const state = {
+    currentScreen: 'splash',
+    user: null,
+    progress: 0,
+    fragments: 0,
+    puzzles: [
+      {
+        id: 1,
+        type: 'Caesar',
+        clue: 'Xli qeppih mrkivvexmsr',
+        solution: 'the memory restoration',
+        shift: 4
+      },
+      {
+        id: 2,
+        type: 'Vigenère',
+        clue: 'Vhht zq wsmjq',
+        solution: 'twit is awesome',
+        key: 'bird'
+      }
+    ],
+    feed: []
+  };
+
+  // DOM Elements
+  const elements = {
+    screens: {
+      splash: document.getElementById('splash-screen'),
+      signup: document.getElementById('signup-screen'),
+      onboarding: document.getElementById('onboarding-screen'),
+      main: document.getElementById('main-screen')
+    },
+    progress: {
+      bar: document.getElementById('restoration-bar'),
+      count: document.getElementById('fragment-count')
+    }
+  };
+
+  // Screen Management
+  function showScreen(screenId) {
+    Object.values(elements.screens).forEach(screen => {
+      screen.classList.remove('active');
+    });
+    elements.screens[screenId].classList.add('active');
+  }
+
+  // Progress System
+  function updateProgress() {
+    state.progress = Math.floor((state.fragments / state.puzzles.length) * 100);
+    elements.progress.bar.style.width = `${state.progress}%`;
+    elements.progress.count.textContent = `${state.fragments} fragments`;
+  }
+
+  // Event Listeners
+  document.getElementById('splash-join-button').addEventListener('click', () => {
+    showScreen('signup');
+  });
+
+  document.getElementById('signup-continue-button').addEventListener('click', () => {
+    const name = document.getElementById('signup-name').value;
+    const handle = document.getElementById('signup-handle').value;
+    
+    if(name && handle) {
+      state.user = { name, handle };
+      showScreen('onboarding');
+      simulateOnboarding();
+    }
+  });
+
+  // Onboarding Sequence
+  async function simulateOnboarding() {
+    const messages = [
+      "Booting restoration protocol...",
+      "Analyzing memory fragments...",
+      "Initializing cipher systems...",
+      "Establishing neural network link...",
+      "Ready to begin restoration!"
+    ];
+
+    const onboardingElement = document.getElementById('onboarding-messages');
+    const beginButton = document.getElementById('begin-restoration-button');
+    
+    for(const message of messages) {
+      await new Promise(resolve => {
+        const p = document.createElement('p');
+        p.className = 'text-blue-400';
+        p.textContent = message;
+        onboardingElement.appendChild(p);
+        setTimeout(resolve, 1500);
+      });
+    }
+    
+    beginButton.classList.remove('hidden');
+    beginButton.addEventListener('click', () => {
+      showScreen('main');
+      initializeMainScreen();
+    });
+  }
+
+  // Main Screen Initialization
+  function initializeMainScreen() {
+    updateProgress();
+    loadCurrentPuzzle();
+  }
+
+  // Puzzle System
+  function loadCurrentPuzzle() {
+    // Implementation from previous version
+  }
+
+  // Tweet System
+  document.getElementById('compose-submit').addEventListener('click', () => {
+    const content = document.getElementById('compose-text').value;
+    if(content.trim()) {
+      state.feed.unshift({
+        user: state.user,
+        content,
+        timestamp: Date.now(),
+        likes: 0,
+        retweets: 0
+      });
+      updateFeed();
+    }
+  });
+
+  function updateFeed() {
+    // Implementation for updating social feed
+  }
+
+  // Initial setup
+  updateProgress();
+});
+</script>
+</body>
+</html>
