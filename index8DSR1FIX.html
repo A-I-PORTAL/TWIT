@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Twit Restoration</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+    <style>
+        /* Glitch Animation */
+        .glitch-container {
+            animation: glitch 2s infinite;
+            position: relative;
+        }
+        
+        @keyframes glitch {
+            0% { transform: translate(0) }
+            20% { transform: translate(-3px, 3px) }
+            40% { transform: translate(3px, -3px) }
+            60% { transform: translate(-3px, 0) }
+            80% { transform: translate(3px, 3px) }
+            100% { transform: translate(0) }
+        }
+
+        /* Screen Management */
+        .screen {
+            display: none;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            min-height: 100vh;
+        }
+        
+        .screen.active {
+            display: flex;
+            opacity: 1;
+            flex-direction: column;
+        }
+
+        /* Progress Bar */
+        .progress-bar {
+            transition: width 0.5s ease;
+        }
+    </style>
+</head>
+<body class="bg-black text-white">
+    <!-- Splash Screen -->
+    <div id="splash" class="screen active items-center justify-center">
+        <div class="glitch-container text-center mb-8">
+            <svg class="w-24 h-24 text-blue-400" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M23.643 4.937c-.835.37-1.732.62-2.675.733.962-.576 1.7-1.49 2.048-2.578-.9.534-1.897.922-2.958 1.13-.85-.904-2.06-1.47-3.4-1.47-2.572 0-4.658 2.086-4.658 4.66 0 .364.042.718.12 1.06-3.873-.195-7.304-2.05-9.602-4.868-.4.69-.63 1.49-.63 2.342 0 1.616.823 3.043 2.072 3.878-.764-.025-1.482-.234-2.11-.583v.06c0 2.257 1.605 4.14 3.737 4.568-.392.106-.803.162-1.227.162-.3 0-.593-.028-.877-.082.593 1.85 2.313 3.198 4.352 3.234-1.595 1.25-3.604 1.995-5.786 1.995-.376 0-.747-.022-1.112-.065 2.062 1.323 4.51 2.093 7.14 2.093 8.57 0 13.255-7.098 13.255-13.254 0-.2-.005-.402-.014-.602.91-.658 1.7-1.477 2.323-2.41z"/>
+            </svg>
+        </div>
+        <h1 class="text-2xl text-blue-400 mb-8">Help Restore Twit's Memory</h1>
+        <button id="joinButton" class="bg-blue-500 px-8 py-3 rounded-lg hover:bg-blue-600 transition">
+            Begin Restoration
+        </button>
+    </div>
+
+    <!-- Signup Screen -->
+    <div id="signup" class="screen items-center justify-center p-4">
+        <div class="max-w-md w-full space-y-6">
+            <div class="glitch-container text-center mb-8">
+                <svg class="w-16 h-16 text-blue-400" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/>
+                </svg>
+            </div>
+            <input type="text" placeholder="Username" 
+                   class="w-full bg-gray-800 p-3 rounded-lg mb-4" id="username">
+            <input type="text" placeholder="@handle" 
+                   class="w-full bg-gray-800 p-3 rounded-lg mb-6" id="handle">
+            <button id="createAccount" 
+                    class="w-full bg-blue-500 p-3 rounded-lg hover:bg-blue-600 transition">
+                Continue
+            </button>
+        </div>
+    </div>
+
+    <!-- Main Game Screen -->
+    <div id="main" class="screen">
+        <header class="p-4 border-b border-gray-800 flex items-center justify-between">
+            <button id="menuButton">
+                <i data-lucide="menu" class="w-6 h-6"></i>
+            </button>
+            <div class="flex items-center space-x-2">
+                <div class="w-8 h-8 bg-blue-500 rounded-full"></div>
+                <span id="progressText" class="text-sm">0% Restored</span>
+            </div>
+        </header>
+
+        <main class="flex-1 overflow-y-auto p-4">
+            <!-- Puzzle Section -->
+            <div class="bg-gray-800 rounded-lg p-4 mb-6">
+                <h2 class="text-xl text-blue-400 mb-4">Memory Fragment</h2>
+                <div id="puzzleDisplay" class="bg-gray-700 rounded-lg p-4 mb-4 glitch-container">
+                    Loading puzzle...
+                </div>
+                <input type="text" placeholder="Enter solution..." 
+                       class="w-full bg-gray-900 p-3 rounded-lg mb-4" id="puzzleInput">
+                <button id="submitSolution" 
+                        class="w-full bg-blue-500 p-3 rounded-lg hover:bg-blue-600 transition">
+                    Submit
+                </button>
+            </div>
+
+            <!-- Progress Section -->
+            <div class="bg-gray-800 rounded-lg p-4">
+                <div class="flex justify-between text-sm mb-2">
+                    <span>Restoration Progress</span>
+                    <span id="fragmentCount">0 Fragments</span>
+                </div>
+                <div class="h-2 bg-gray-700 rounded-full">
+                    <div id="progressBar" class="h-full bg-blue-500 rounded-full progress-bar" style="width: 0%"></div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Navigation -->
+        <nav class="grid grid-cols-4 gap-2 p-2 border-t border-gray-800">
+            <button class="p-2 hover:bg-gray-800 rounded-lg"><i data-lucide="home"></i></button>
+            <button class="p-2 hover:bg-gray-800 rounded-lg"><i data-lucide="search"></i></button>
+            <button class="p-2 hover:bg-gray-800 rounded-lg"><i data-lucide="message-circle"></i></button>
+            <button class="p-2 hover:bg-gray-800 rounded-lg"><i data-lucide="user"></i></button>
+        </nav>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // Initialize icons
+        lucide.createIcons();
+
+        // Game State
+        const state = {
+            currentScreen: 'splash',
+            progress: 0,
+            fragments: 0,
+            puzzles: [
+                {
+                    id: 1,
+                    cipher: 'Caesar',
+                    text: 'Xli qeppih mrkivvexmsr',
+                    solution: 'the memory restoration',
+                    shift: 4
+                },
+                {
+                    id: 2,
+                    cipher: 'Vigenère',
+                    text: 'Vhht zq wsmjq',
+                    solution: 'twit is awesome',
+                    key: 'bird'
+                }
+            ]
+        };
+
+        // Screen Management
+        const screens = {
+            splash: document.getElementById('splash'),
+            signup: document.getElementById('signup'),
+            main: document.getElementById('main')
+        };
+
+        // UI Elements
+        const elements = {
+            progressText: document.getElementById('progressText'),
+            fragmentCount: document.getElementById('fragmentCount'),
+            progressBar: document.getElementById('progressBar'),
+            puzzleDisplay: document.getElementById('puzzleDisplay'),
+            puzzleInput: document.getElementById('puzzleInput')
+        };
+
+        // Show Initial Screen
+        function showScreen(screenName) {
+            Object.values(screens).forEach(screen => screen.classList.remove('active'));
+            screens[screenName].classList.add('active');
+        }
+
+        // Update Progress Display
+        function updateProgress() {
+            state.progress = Math.min(100, Math.floor((state.fragments / state.puzzles.length) * 100));
+            elements.progressText.textContent = `${state.progress}% Restored`;
+            elements.fragmentCount.textContent = `${state.fragments}/${state.puzzles.length} Fragments`;
+            elements.progressBar.style.width = `${state.progress}%`;
+        }
+
+        // Load Current Puzzle
+        function loadCurrentPuzzle() {
+            const currentPuzzle = state.puzzles[state.fragments];
+            elements.puzzleDisplay.textContent = currentPuzzle.text;
+            elements.puzzleInput.value = '';
+        }
+
+        // Event Listeners
+        document.getElementById('joinButton').addEventListener('click', () => {
+            showScreen('signup');
+        });
+
+        document.getElementById('createAccount').addEventListener('click', () => {
+            const username = document.getElementById('username').value;
+            const handle = document.getElementById('handle').value;
+            
+            if(username && handle) {
+                showScreen('main');
+                loadCurrentPuzzle();
+                updateProgress();
+            }
+        });
+
+        document.getElementById('submitSolution').addEventListener('click', () => {
+            const solution = elements.puzzleInput.value.toLowerCase().trim();
+            const currentPuzzle = state.puzzles[state.fragments];
+            
+            if(solution === currentPuzzle.solution) {
+                state.fragments++;
+                if(state.fragments < state.puzzles.length) {
+                    loadCurrentPuzzle();
+                } else {
+                    elements.puzzleDisplay.textContent = "Memory Fully Restored!";
+                    elements.puzzleInput.disabled = true;
+                }
+                updateProgress();
+            } else {
+                alert('Incorrect solution. Try again!');
+            }
+        });
+
+        // Initial setup
+        updateProgress();
+    });
+    </script>
+</body>
+</html>
